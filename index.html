@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>메이플 오목 미니게임 UI</title>
+  <title>메이플 윷놀이 미니게임</title>
   <style>
     :root {
       --win-blue-1: #eef5fb;
@@ -13,7 +13,6 @@
       --win-blue-5: #496577;
       --line: #c6ced7;
       --line-dark: #8fa4b6;
-      --grid-line: #cfd2d5;
       --chat-bg: #262626;
       --blue-btn-top: #53a9e7;
       --blue-btn-mid: #2488d3;
@@ -21,56 +20,122 @@
       --orange-btn-top: #ffb84c;
       --orange-btn-mid: #ff8d1d;
       --orange-btn-bottom: #e26a00;
-      --status-bg: #fafafa;
     }
 
-    * {
-      box-sizing: border-box;
-    }
-
-    html,
-    body {
-      margin: 0;
-      min-height: 100%;
-    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
 
     body {
       display: grid;
       place-items: center;
       background:
-        linear-gradient(rgba(13, 19, 24, 0.14), rgba(13, 19, 24, 0.14)),
-        url("./assets/Map_3F3F.webp") center center / cover no-repeat fixed;
+        linear-gradient(rgba(13,19,24,.14), rgba(13,19,24,.14)),
+        url("./assets/Map_3F3F.webp") center / cover no-repeat fixed;
       padding: 16px;
       color: #2d3136;
-      font-family: "Gulim", "Dotum", "Tahoma", sans-serif;
+      font-family: "Gulim","Dotum","Tahoma",sans-serif;
       font-size: 9pt;
       line-height: 1.15;
     }
+    button, input { font: inherit; }
 
-    button,
-    input {
-      font: inherit;
-    }
+    /* ══════════════ 윈도우 프레임 ══════════════ */
 
     .window {
       width: min(100%, 742px);
       background: #cedfeb;
       border: 1px solid #4f6475;
-      box-shadow:
-        0 0 0 1px #f8fdff,
-        0 0 0 2px #9ab0c2,
-        0 10px 28px rgba(47, 64, 80, 0.22);
+      box-shadow: 0 0 0 1px #f8fdff, 0 0 0 2px #9ab0c2, 0 10px 28px rgba(47,64,80,.22);
       padding: 2px;
     }
-
     .window-inner {
       border: 1px solid #d8ebf8;
       background: linear-gradient(180deg, #eef5fa, #dce7f0);
-      box-shadow:
-        inset 1px 1px 0 #ffffff,
-        inset -1px -1px 0 #a7bbcb;
+      box-shadow: inset 1px 1px 0 #fff, inset -1px -1px 0 #a7bbcb;
       padding: 2px;
     }
+
+    /* ══════════════ 로비 ══════════════ */
+
+    .lobby { padding: 12px; }
+    .lobby-title {
+      text-align: center;
+      font-size: 14pt;
+      font-weight: bold;
+      color: #384651;
+      margin-bottom: 12px;
+      letter-spacing: -0.3px;
+    }
+    .lobby-body {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-width: 340px;
+      margin: 0 auto;
+    }
+    .lobby-body input {
+      height: 26px;
+      border: 1px solid #7f96aa;
+      background: #f9f9fb;
+      box-shadow: inset 1px 1px 0 #fff, inset -1px -1px 0 #c5d2dc;
+      padding: 0 6px;
+      outline: none;
+    }
+    .lobby-join {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 4px;
+    }
+    .lobby-join input { text-transform: uppercase; letter-spacing: 2px; text-align: center; }
+    .lobby-buttons { display: flex; flex-direction: column; gap: 4px; }
+    .lobby-btn, #btn-refresh {
+      height: 28px;
+      border: 1px solid #1a5487;
+      background: linear-gradient(180deg, var(--blue-btn-top), var(--blue-btn-mid) 68%, var(--blue-btn-bottom));
+      box-shadow: inset 1px 1px 0 rgba(255,255,255,.6), inset -1px -1px 0 rgba(11,63,113,.45);
+      color: #fff;
+      text-shadow: 1px 1px 0 rgba(9,55,98,.6);
+      cursor: pointer;
+      font-weight: bold;
+    }
+    #btn-refresh {
+      background: linear-gradient(180deg, #f0f0f0, #c8d0d8);
+      color: #555;
+      border-color: #8f9ca7;
+      text-shadow: none;
+      font-weight: normal;
+    }
+
+    /* 방 목록 */
+    #room-list {
+      border: 1px solid #9eb1c0;
+      background: #fff;
+      min-height: 60px;
+      max-height: 140px;
+      overflow-y: auto;
+      padding: 2px;
+    }
+    .room-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 6px;
+      cursor: pointer;
+      border-bottom: 1px solid #e8eef3;
+    }
+    .room-item:hover { background: #eef5fb; }
+    .room-code-tag {
+      font-weight: bold;
+      color: #2488d3;
+      letter-spacing: 1px;
+    }
+    .room-empty {
+      text-align: center;
+      color: #999;
+      padding: 16px 0;
+      margin: 0;
+    }
+
+    /* ══════════════ 게임 레이아웃 ══════════════ */
 
     .layout {
       display: grid;
@@ -78,1007 +143,432 @@
       gap: 2px;
       align-items: stretch;
     }
-
-    .panel {
-      background: transparent;
-      border: 0;
-      box-shadow: none;
-      min-width: 0;
-    }
+    .panel { background: transparent; border: 0; box-shadow: none; min-width: 0; }
 
     .board-panel {
       display: grid;
-      grid-template-rows: minmax(0, 1fr) 30px;
+      grid-template-rows: minmax(0,1fr) 30px;
       gap: 2px;
-      padding: 0;
     }
-
     .board-shell {
       border: 2px solid #6f879b;
       background: #f8fbfd;
-      box-shadow: inset 1px 1px 0 #ffffff;
+      box-shadow: inset 1px 1px 0 #fff;
       padding: 3px;
-      flex: 1;
     }
-
     .board {
       position: relative;
       width: 100%;
-      aspect-ratio: 1 / 1;
-      border: 1px solid #d7dee5;
-      background: #ffffff;
+      aspect-ratio: 1/1;
+      background: #fff;
       overflow: hidden;
     }
-
-    .board-playfield {
-      position: absolute;
-      inset: 14px;
-      border: 1px solid var(--grid-line);
-      background-image:
-        linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
-        linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
-      background-size: calc(100% / 14) 100%, 100% calc(100% / 14);
-      background-position: 0 0, 0 0;
-    }
-
-    .stone {
-      position: absolute;
-      width: 24px;
-      height: 24px;
-      transform: translate(-50%, -50%);
-      image-rendering: pixelated;
-      filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.2));
-    }
-
-    .stone .head {
-      position: absolute;
-      inset: 2px 3px 6px;
-      border-radius: 45% 45% 42% 42%;
-    }
-
-    .stone .head::before,
-    .stone .head::after {
-      content: "";
-      position: absolute;
-    }
-
-    .stone .feet {
-      position: absolute;
-      bottom: 1px;
-      left: 6px;
-      width: 4px;
-      height: 4px;
-      border-radius: 50%;
-      box-shadow: 8px 0 0 currentColor;
-    }
-
-    .stone.pig {
-      color: #f8c469;
-    }
-
-    .stone.pig .head {
-      border: 1px solid #b65179;
-      background:
-        radial-gradient(circle at 34% 45%, #402331 0 1px, transparent 1.2px),
-        radial-gradient(circle at 66% 45%, #402331 0 1px, transparent 1.2px),
-        linear-gradient(180deg, #ffbfd1 0, #f798b7 55%, #ec789b 100%);
-      box-shadow: inset 1px 1px 0 rgba(255, 240, 245, 0.85);
-    }
-
-    .stone.pig .head::before {
-      top: -3px;
-      left: 1px;
-      width: 6px;
-      height: 6px;
-      border-radius: 2px 3px 0 3px;
-      transform: rotate(-38deg);
-      background: #f28eaf;
-      border: 1px solid #b65179;
-      box-shadow: 10px 0 0 #f28eaf, 10px 0 0 1px #b65179;
-    }
-
-    .stone.pig .head::after {
-      left: 6px;
-      bottom: 3px;
-      width: 8px;
-      height: 6px;
-      border-radius: 45%;
-      border: 1px solid #c9698d;
-      background:
-        radial-gradient(circle at 34% 52%, #8c4960 0 1px, transparent 1.2px),
-        radial-gradient(circle at 66% 52%, #8c4960 0 1px, transparent 1.2px),
-        #f8b0c8;
-    }
-
-    .stone.panda {
-      color: #98a0a9;
-    }
-
-    .stone.panda .head {
-      border: 1px solid #4d545d;
-      background:
-        radial-gradient(circle at 35% 44%, #0d1013 0 1px, transparent 1.2px),
-        radial-gradient(circle at 65% 44%, #0d1013 0 1px, transparent 1.2px),
-        radial-gradient(circle at 34% 44%, #2e3338 0 3px, transparent 3.2px),
-        radial-gradient(circle at 66% 44%, #2e3338 0 3px, transparent 3.2px),
-        linear-gradient(180deg, #ffffff 0, #edf1f4 65%, #dce4ea 100%);
-      box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.9);
-    }
-
-    .stone.panda .head::before {
-      top: -3px;
-      left: 1px;
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: #2d3136;
-      box-shadow: 10px 0 0 #2d3136;
-    }
-
-    .stone.panda .head::after {
-      left: 7px;
-      bottom: 3px;
-      width: 6px;
-      height: 4px;
-      border-radius: 50%;
-      background:
-        radial-gradient(circle at 50% 40%, #101317 0 1px, transparent 1.2px),
-        #ffffff;
-    }
+    #canvas { display: block; }
 
     .status-frame {
       min-height: 30px;
       border: 2px solid #6f879b;
       background: #f8fbfd;
-      box-shadow: inset 1px 1px 0 #ffffff;
+      box-shadow: inset 1px 1px 0 #fff;
       padding: 1px 7px 0;
     }
-
     .status-bar {
       height: 24px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 8px;
-      padding: 0;
-      border: 0;
-      background: transparent;
       color: #3a3d42;
       white-space: nowrap;
     }
-
-    .status-user {
-      overflow: hidden;
-      text-overflow: ellipsis;
+    #room-code-label {
+      font-weight: bold;
+      color: #2488d3;
+      letter-spacing: 1px;
     }
 
-    .timer {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-    }
-
-    .timer::before {
-      content: "";
-      width: 11px;
-      height: 11px;
-      border-radius: 50%;
-      border: 1px solid #aa7419;
-      background:
-        radial-gradient(circle at 30% 30%, #fff7d9 0, #efc25b 48%, #c7881d 100%);
-      box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.55);
-    }
+    /* ══════════════ 사이드 패널 ══════════════ */
 
     .side-panel {
       display: grid;
-      grid-template-rows: 30px 188px 38px 119px 30px;
+      grid-template-rows: 30px 110px 14px 70px minmax(0,1fr) 30px;
       gap: 2px;
-      padding: 0;
     }
 
-    .logo-box,
-    .title-box,
-    .upper-frame,
-    .start-frame,
-    .chat-frame,
-    .actions-frame {
+    .frame {
       border: 2px solid #6f879b;
       background: #f8fbfd;
-      box-shadow: inset 1px 1px 0 #ffffff;
+      box-shadow: inset 1px 1px 0 #fff;
       min-width: 0;
       min-height: 0;
     }
 
+    /* 헤더 */
     .header-row {
       display: grid;
       grid-template-columns: 71px 1fr;
       gap: 2px;
       height: 100%;
-      margin: 0;
     }
-
-    .logo-box,
-    .title-box {
-      height: 100%;
-    }
-
     .logo-box {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      color: #485969;
-      font-size: 8px;
-      font-weight: bold;
-      line-height: 1.05;
-      letter-spacing: 0.2px;
-      background: linear-gradient(180deg, #fafdfd, #dce7ef);
+      display: flex; align-items: center; justify-content: center; text-align: center;
+      color: #485969; font-size: 8px; font-weight: bold; line-height: 1.05;
+      border: 2px solid #6f879b; background: linear-gradient(180deg, #fafdfd, #dce7ef);
+      box-shadow: inset 1px 1px 0 #fff;
     }
-
     .title-box {
-      display: flex;
-      align-items: center;
-      padding: 0 8px;
-      color: #384651;
-      font-size: 9pt;
-      letter-spacing: 0;
-      background: linear-gradient(180deg, #eef3f8, #d9e3eb);
+      display: flex; align-items: center; padding: 0 8px;
+      color: #384651; font-size: 9pt;
+      border: 2px solid #6f879b; background: linear-gradient(180deg, #eef3f8, #d9e3eb);
+      box-shadow: inset 1px 1px 0 #fff;
     }
 
-    .player-area {
+    /* 플레이어 정보 */
+    .player-frame { padding: 4px; }
+    .player-cards {
       display: grid;
-      grid-template-columns: 86px 1fr;
+      grid-template-columns: 1fr 1fr;
       gap: 4px;
-      min-height: 0;
       height: 100%;
     }
-
-    .upper-frame {
-      padding: 2px;
-    }
-
-    .host-card,
-    .seat-block {
-      min-height: 0;
-      height: 100%;
-    }
-
-    .host-card {
-      border: 2px solid #f04444;
-      background: #ffffff;
-      box-shadow: inset 1px 1px 0 #ffffff, inset -1px -1px 0 #d3dce5;
-    }
-
-    .host-portrait-wrap {
-      padding: 4px;
-      height: 95px;
-      background: linear-gradient(180deg, #c7dced, #b6cfdf);
-      border-bottom: 1px solid #cbd8e1;
-    }
-
-    .portrait {
-      width: 100%;
-      height: 100%;
-      border: 1px solid #95adbf;
-      background: linear-gradient(180deg, #e1ecf4, #c6d5e1);
-      box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.75);
-      overflow: hidden;
-    }
-
-    .portrait svg {
-      width: 100%;
-      height: 100%;
-      display: block;
-    }
-
-    .host-meta {
-      padding: 3px 4px 4px;
-      line-height: 1.15;
-    }
-
-    .host-name {
-      background: #bccad6;
-      color: #4b5d6d;
-      text-align: center;
-      margin: 0 -1px 3px;
-      padding: 2px 0 1px;
-      font-size: 13px;
-    }
-
-    .score {
-      text-align: right;
-      margin-bottom: 3px;
-      font-size: 12px;
-      color: #3b4045;
-    }
-
-    .record {
-      display: grid;
-      grid-template-columns: auto 1fr;
-      column-gap: 4px;
-      row-gap: 1px;
-      align-items: center;
-    }
-
-    .record-title {
-      align-self: start;
-      color: #45494f;
-    }
-
-    .record-lines {
-      text-align: right;
-    }
-
-    .token-sprite {
-      width: 20px;
-      height: 20px;
-      position: relative;
-      margin-top: 4px;
-    }
-
-    .token-sprite .head {
-      position: absolute;
-      inset: 2px 2px 5px;
-    }
-
-    .token-sprite .feet {
-      position: absolute;
-      bottom: 0;
-      left: 4px;
-      width: 3px;
-      height: 3px;
-      border-radius: 50%;
-      box-shadow: 7px 0 0 currentColor;
-    }
-
-    .token-sprite.pig {
-      color: #f0b85f;
-    }
-
-    .token-sprite.pig .head {
-      border: 1px solid #b65179;
-      border-radius: 42% 42% 38% 38%;
-      background:
-        radial-gradient(circle at 34% 45%, #402331 0 1px, transparent 1.2px),
-        radial-gradient(circle at 66% 45%, #402331 0 1px, transparent 1.2px),
-        linear-gradient(180deg, #ffbfd1 0, #f798b7 55%, #ec789b 100%);
-    }
-
-    .token-sprite.pig .head::before,
-    .token-sprite.pig .head::after,
-    .token-sprite.panda .head::before,
-    .token-sprite.panda .head::after {
-      content: "";
-      position: absolute;
-    }
-
-    .token-sprite.pig .head::before {
-      top: -3px;
-      left: 1px;
-      width: 5px;
-      height: 5px;
-      border-radius: 2px 3px 0 3px;
-      transform: rotate(-35deg);
-      background: #f28eaf;
-      border: 1px solid #b65179;
-      box-shadow: 8px 0 0 #f28eaf, 8px 0 0 1px #b65179;
-    }
-
-    .token-sprite.pig .head::after {
-      left: 4px;
-      bottom: 2px;
-      width: 7px;
-      height: 5px;
-      border-radius: 45%;
-      border: 1px solid #c9698d;
-      background:
-        radial-gradient(circle at 34% 52%, #8c4960 0 1px, transparent 1.1px),
-        radial-gradient(circle at 66% 52%, #8c4960 0 1px, transparent 1.1px),
-        #f8b0c8;
-    }
-
-    .token-sprite.panda {
-      color: #96a0aa;
-    }
-
-    .token-sprite.panda .head {
-      border: 1px solid #4d545d;
-      border-radius: 42% 42% 38% 38%;
-      background:
-        radial-gradient(circle at 35% 44%, #0d1013 0 1px, transparent 1.2px),
-        radial-gradient(circle at 65% 44%, #0d1013 0 1px, transparent 1.2px),
-        radial-gradient(circle at 34% 44%, #2e3338 0 3px, transparent 3.2px),
-        radial-gradient(circle at 66% 44%, #2e3338 0 3px, transparent 3.2px),
-        linear-gradient(180deg, #ffffff 0, #edf1f4 65%, #dce4ea 100%);
-    }
-
-    .token-sprite.panda .head::before {
-      top: -3px;
-      left: 1px;
-      width: 5px;
-      height: 5px;
-      border-radius: 50%;
-      background: #2d3136;
-      box-shadow: 8px 0 0 #2d3136;
-    }
-
-    .token-sprite.panda .head::after {
-      left: 5px;
-      bottom: 2px;
-      width: 6px;
-      height: 4px;
-      border-radius: 50%;
-      background:
-        radial-gradient(circle at 50% 40%, #101317 0 1px, transparent 1.1px),
-        #ffffff;
-    }
-
-    .seat-block {
-      border: 1px solid #bccbd7;
-      background: #ffffff;
-      box-shadow: inset 1px 1px 0 #ffffff, inset -1px -1px 0 #d2dde6;
-      display: grid;
-      grid-template-rows: 92px 1fr;
-      overflow: hidden;
-    }
-
-    .seat-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      border-bottom: 1px solid #d3dde5;
-      background: linear-gradient(180deg, #d2e2ef, #c0d4e4);
-    }
-
-    .seat {
-      position: relative;
-      min-width: 0;
-      border-right: 1px solid #d3dde5;
-    }
-
-    .seat:last-child {
-      border-right: 0;
-    }
-
-    .seat.occupied {
-      padding: 4px;
-    }
-
-    .seat .portrait {
-      height: 82px;
-    }
-
-    .seat-close {
-      position: absolute;
-      top: 3px;
-      right: 3px;
-      width: 10px;
-      height: 10px;
-      border: 1px solid #737f8a;
-      background: linear-gradient(180deg, #edf2f6, #b9c7d2);
-      box-shadow: inset 1px 1px 0 #ffffff;
-    }
-
-    .seat-close::before,
-    .seat-close::after {
-      content: "";
-      position: absolute;
-      left: 4px;
-      top: 1px;
-      width: 1px;
-      height: 6px;
-      background: #4f5860;
-      transform: rotate(45deg);
-      transform-origin: center;
-    }
-
-    .seat-close::after {
-      transform: rotate(-45deg);
-    }
-
-    .empty-seat::before {
-      content: "";
-      position: absolute;
-      left: 50%;
-      bottom: 11px;
-      width: 40px;
-      height: 8px;
-      border-radius: 50%;
-      background: rgba(78, 100, 118, 0.22);
-      transform: translateX(-50%);
-      filter: blur(0.3px);
-    }
-
-    .rival-info {
-      padding: 4px 6px 4px;
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 2px;
-    }
-
-    .rival-name {
-      color: #4b5d6d;
-      background: #bccad6;
-      margin: -1px -1px 0;
-      padding: 2px 6px 1px;
-      font-size: 13px;
-    }
-
-    .rival-score {
-      text-align: center;
-      font-size: 12px;
-      margin-top: 2px;
-    }
-
-    .rival-record {
-      display: grid;
-      grid-template-columns: auto auto;
-      justify-content: start;
-      gap: 4px 6px;
-      align-items: start;
-    }
-
-    .rival-record-lines {
-      line-height: 1.1;
-    }
-
-    .start-row {
+    .pcard {
+      border: 2px solid #b0bcc8;
+      background: #fff;
+      padding: 6px;
       display: flex;
-      justify-content: flex-end;
-      align-items: center;
-      gap: 8px;
-      height: 100%;
-      padding: 0 4px 0 0;
-      margin-top: 0;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .pcard.host { border-color: #2488d3; }
+    .pcard.guest { border-color: #e04848; }
+    .pcard-name {
+      text-align: center;
+      font-size: 12px;
+      font-weight: bold;
+      padding: 2px 0;
+      background: #eef3f8;
+      border-bottom: 2px solid transparent;
+    }
+    .pcard-color {
+      width: 14px; height: 14px; border-radius: 50%;
+      margin: 2px auto;
+      border: 1px solid;
+    }
+    .pcard.host .pcard-color { background: #2488d3; border-color: #155f8a; }
+    .pcard.guest .pcard-color { background: #e04848; border-color: #a03030; }
+    .pcard-pieces {
+      text-align: center;
+      font-size: 11px;
+      color: #555;
+      letter-spacing: 1px;
     }
 
-    .start-frame {
-      padding: 0;
+    /* 윷 / 액션 영역 */
+    .yut-frame { padding: 4px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+    .yut-result {
+      font-size: 20pt;
+      font-weight: bold;
+      color: #384651;
+      min-height: 30px;
+      line-height: 30px;
     }
-
-    .start-divider {
-      width: 1px;
-      height: 23px;
-      background: #cad5df;
-      box-shadow: 1px 0 0 #ffffff;
-      margin-right: 2px;
+    .yut-pop { animation: yutpop .35s ease-out; }
+    @keyframes yutpop {
+      0%   { transform: scale(1.8); opacity: .5; }
+      100% { transform: scale(1);   opacity: 1; }
     }
+    #off-board-area { display: flex; gap: 4px; }
 
-    .start-button {
-      width: 100px;
-      height: 34px;
+    .game-btn {
+      height: 30px;
+      min-width: 90px;
+      padding: 0 12px;
       border: 1px solid #8f9ca7;
       background: linear-gradient(180deg, #f7f7f7, #c8d0d8);
-      box-shadow:
-        inset 1px 1px 0 #ffffff,
-        inset -1px -1px 0 #909aa4;
-      color: #7c858d;
-      font-size: 12pt;
+      box-shadow: inset 1px 1px 0 #fff, inset -1px -1px 0 #909aa4;
+      color: #555;
+      font-size: 11pt;
       font-weight: bold;
-      letter-spacing: -0.2px;
-      text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.85);
       cursor: pointer;
     }
-
-    .chat-wrap {
-      margin-top: 0;
+    .game-btn.primary {
+      border-color: #1a5487;
+      background: linear-gradient(180deg, var(--blue-btn-top), var(--blue-btn-mid) 68%, var(--blue-btn-bottom));
+      box-shadow: inset 1px 1px 0 rgba(255,255,255,.6), inset -1px -1px 0 rgba(11,63,113,.45);
+      color: #fff;
+      text-shadow: 1px 1px 0 rgba(9,55,98,.6);
     }
+    .game-btn:active { transform: translateY(1px); }
 
+    /* 채팅 */
     .chat-frame {
       display: grid;
-      grid-template-rows: minmax(0, 1fr) 25px;
-      gap: 5px;
+      grid-template-rows: minmax(0,1fr) 25px;
+      gap: 2px;
       padding: 2px;
     }
-
     .chat-shell {
       border: 1px solid #9eb1c0;
-      background: #ffffff;
-      box-shadow: inset 1px 1px 0 #ffffff, inset -1px -1px 0 #d4dce4;
+      background: #fff;
+      box-shadow: inset 1px 1px 0 #fff, inset -1px -1px 0 #d4dce4;
       padding: 1px;
       min-height: 0;
     }
-
     .chat-box {
-      display: grid;
-      grid-template-columns: 1fr 14px;
-      height: 95px;
+      height: 100%;
       background: var(--chat-bg);
       border: 1px solid #767f88;
-    }
-
-    .chat-log {
-      padding: 7px 7px 7px 6px;
-      color: #f0f0f0;
       overflow: hidden;
-      line-height: 1.32;
     }
-
-    .chat-log p {
-      margin: 0;
+    .chat-log {
+      height: 100%;
+      padding: 6px;
+      color: #f0f0f0;
+      overflow-y: auto;
+      line-height: 1.35;
+      font-size: 8.5pt;
     }
-
-    .chat-scrollbar {
-      display: grid;
-      grid-template-rows: 12px 1fr 12px;
-      background: linear-gradient(180deg, #d8e8f3, #b9cede);
-      border-left: 1px solid #96acbe;
-    }
-
-    .scroll-arrow,
-    .scroll-thumb {
-      position: relative;
-      border-bottom: 1px solid #8ca4b6;
-      box-shadow: inset 1px 1px 0 #ffffff, inset -1px -1px 0 #8ca4b6;
-      background: linear-gradient(180deg, #f6fbfe, #bed3e4);
-    }
-
-    .scroll-arrow:last-child {
-      border-bottom: 0;
-      border-top: 1px solid #8ca4b6;
-    }
-
-    .scroll-arrow::before {
-      content: "";
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      width: 0;
-      height: 0;
-      transform: translate(-50%, -50%);
-      border-left: 3px solid transparent;
-      border-right: 3px solid transparent;
-    }
-
-    .scroll-arrow.up::before {
-      border-bottom: 4px solid #256ea2;
-    }
-
-    .scroll-arrow.down::before {
-      border-top: 4px solid #256ea2;
-    }
-
-    .scroll-track {
-      position: relative;
-      background: linear-gradient(180deg, #e8f1f8, #cadbea);
-    }
-
-    .scroll-thumb {
-      position: absolute;
-      left: 1px;
-      right: 1px;
-      top: 43px;
-      height: 20px;
-      border: 1px solid #5c8fb2;
-      background: linear-gradient(180deg, #46b0ea, #0d87d6);
-      box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.6);
-    }
-
-    .chat-input-row {
-      display: grid;
-      grid-template-columns: 1fr 18px;
-      gap: 3px;
-      align-items: end;
-      margin-top: 6px;
-    }
-
+    .chat-log p { margin: 0 0 1px; }
+    .chat-input-row { margin-top: 0; }
     .chat-input {
+      width: 100%;
       height: 21px;
       border: 1px solid #7f96aa;
       background: #f9f9fb;
-      box-shadow: inset 1px 1px 0 #ffffff, inset -1px -1px 0 #c5d2dc;
+      box-shadow: inset 1px 1px 0 #fff, inset -1px -1px 0 #c5d2dc;
       padding: 0 5px;
       outline: none;
     }
 
-    .send-icon {
-      width: 18px;
-      height: 21px;
-      border: 1px solid #b46924;
-      background: linear-gradient(180deg, #ffd98e, #ff9d25);
-      box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.7), inset -1px -1px 0 rgba(143, 79, 7, 0.45);
-      position: relative;
-    }
-
-    .send-icon::before {
-      content: "";
-      position: absolute;
-      left: 4px;
-      top: 4px;
-      width: 8px;
-      height: 8px;
-      border: 2px solid #fff3d5;
-      border-bottom-color: transparent;
-      border-right-color: transparent;
-      transform: rotate(45deg);
-    }
-
-    .actions-frame {
-      min-height: 30px;
-      padding: 3px 4px 2px;
-    }
-
+    /* 하단 버튼 */
+    .actions-frame { min-height: 30px; padding: 3px 4px 2px; }
     .actions {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 6px;
-      border: 0;
-      background: transparent;
-      box-shadow: none;
-      padding: 0;
     }
-
-    .left-actions {
-      display: flex;
-      gap: 3px;
-    }
-
+    .left-actions { display: flex; gap: 3px; }
     .mini-btn {
-      min-width: 44px;
-      height: 20px;
-      padding: 0 7px;
+      min-width: 44px; height: 20px; padding: 0 7px;
       border: 1px solid #1a5487;
       background: linear-gradient(180deg, var(--blue-btn-top), var(--blue-btn-mid) 68%, var(--blue-btn-bottom));
-      box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.6), inset -1px -1px 0 rgba(11, 63, 113, 0.45);
-      color: #ffffff;
-      text-shadow: 1px 1px 0 rgba(9, 55, 98, 0.6);
+      box-shadow: inset 1px 1px 0 rgba(255,255,255,.6), inset -1px -1px 0 rgba(11,63,113,.45);
+      color: #fff;
+      text-shadow: 1px 1px 0 rgba(9,55,98,.6);
       cursor: pointer;
     }
-
     .mini-btn.exit {
       border-color: #ac5600;
       background: linear-gradient(180deg, var(--orange-btn-top), var(--orange-btn-mid) 68%, var(--orange-btn-bottom));
-      box-shadow: inset 1px 1px 0 rgba(255, 246, 220, 0.7), inset -1px -1px 0 rgba(136, 72, 9, 0.45);
+      box-shadow: inset 1px 1px 0 rgba(255,246,220,.7), inset -1px -1px 0 rgba(136,72,9,.45);
+    }
+    .mini-btn:active, .game-btn:active { transform: translateY(1px); }
+
+    /* ══════════════ 타이머 ══════════════ */
+
+    .timer-wrap {
+      height: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 2px;
+    }
+    .timer-track {
+      flex: 1;
+      height: 8px;
+      background: #dce4ec;
+      border: 1px solid #a0b0be;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .timer-fill {
+      height: 100%;
+      width: 100%;
+      background: linear-gradient(180deg, #5bc05b, #3a9d3a);
+      transition: width .25s linear;
+      border-radius: 1px;
+    }
+    .timer-fill.urgent { background: linear-gradient(180deg, #e85050, #c03030); }
+    #timer-text {
+      min-width: 28px;
+      text-align: right;
+      font-size: 9px;
+      font-weight: bold;
+      color: #555;
+    }
+    #timer-text.urgent { color: #d03030; }
+
+    /* ══════════════ 윷짝 ══════════════ */
+
+    #yut-sticks {
+      display: flex;
+      gap: 5px;
+      justify-content: center;
+      min-height: 20px;
+    }
+    .stick {
+      width: 10px;
+      height: 28px;
+      border-radius: 3px;
+      border: 1px solid #8a7a50;
+      animation: stickDrop .3s ease-out both;
+    }
+    .stick.flat {
+      background: linear-gradient(180deg, #f8ecc8, #e4d09a);
+      box-shadow: inset 1px 1px 0 rgba(255,255,255,.6);
+    }
+    .stick.round {
+      background: linear-gradient(180deg, #a07830, #785818);
+      box-shadow: inset 1px 1px 0 rgba(180,150,100,.4);
+    }
+    .stick.backdo {
+      border-color: #c04040;
+      box-shadow: 0 0 4px rgba(200,60,60,.5);
+    }
+    @keyframes stickDrop {
+      0%   { transform: translateY(-12px) rotate(8deg); opacity: 0; }
+      100% { transform: translateY(0) rotate(0); opacity: 1; }
     }
 
-    .mini-btn:active,
-    .start-button:active {
-      transform: translateY(1px);
+    /* ══════════════ 턴 표시 ══════════════ */
+
+    .pcard.active-turn {
+      box-shadow: 0 0 0 2px #ffcc00, 0 0 8px rgba(255,200,0,.35);
     }
+    .pcard.active-turn .pcard-name {
+      background: #fff8d8;
+    }
+
+    /* ══════════════ 반응형 ══════════════ */
 
     @media (max-width: 780px) {
-      .layout {
-        grid-template-columns: 1fr;
-      }
-
-      .window {
-        width: min(100%, 520px);
-      }
-
-      .player-area {
-        grid-template-columns: 86px 1fr;
-      }
-
-      .side-panel {
-        grid-template-rows: auto auto auto auto auto;
-      }
+      .layout { grid-template-columns: 1fr; }
+      .window { width: min(100%, 520px); }
+      .side-panel { grid-template-rows: auto auto auto auto auto; }
     }
-
     @media (max-width: 560px) {
-      body {
-        padding: 8px;
-      }
-
-      .window {
-        width: 100%;
-      }
-
-      .title-box {
-        font-size: 10pt;
-      }
-
-      .player-area {
-        grid-template-columns: 1fr;
-      }
-
-      .actions {
-        flex-wrap: wrap;
-      }
-
-      .left-actions {
-        flex-wrap: wrap;
-      }
+      body { padding: 8px; }
+      .window { width: 100%; }
+      .player-cards { grid-template-columns: 1fr; }
+      .actions, .left-actions { flex-wrap: wrap; }
     }
   </style>
 </head>
 <body>
-  <main class="window">
+
+  <!-- ════════ 로비 화면 ════════ -->
+  <main id="screen-lobby" class="window">
+    <div class="window-inner">
+      <div class="lobby">
+        <div class="lobby-title">메이플 윷놀이</div>
+        <div class="lobby-body">
+          <input id="inp-nick" maxlength="12" placeholder="닉네임 입력">
+          <div class="lobby-buttons">
+            <button id="btn-create" class="lobby-btn" type="button">방 만들기</button>
+            <div class="lobby-join">
+              <input id="inp-code" maxlength="4" placeholder="방 코드">
+              <button id="btn-join" class="lobby-btn" type="button">참가</button>
+            </div>
+          </div>
+          <div id="room-list"></div>
+          <button id="btn-refresh" type="button">방 목록 새로고침</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ════════ 게임 화면 ════════ -->
+  <main id="screen-game" class="window" style="display:none">
     <div class="window-inner">
       <div class="layout">
-        <section class="panel board-panel" aria-label="오목판 영역">
+
+        <!-- ── 왼쪽: 윷판 ── -->
+        <section class="panel board-panel">
           <div class="board-shell">
             <div class="board">
-              <div class="board-playfield" id="boardPlayfield" aria-hidden="true"></div>
+              <canvas id="canvas"></canvas>
             </div>
           </div>
           <div class="status-frame">
             <div class="status-bar">
-              <span class="status-user">[ DK로스 ] 님이 하실 차례입니다.</span>
-              <span class="timer">남은 시간 : 26 초</span>
+              <span id="status-text">대기 중...</span>
+              <span id="room-code-label"></span>
             </div>
           </div>
         </section>
 
-        <aside class="panel side-panel" aria-label="유저 정보 및 채팅 영역">
+        <!-- ── 오른쪽: 사이드 패널 ── -->
+        <aside class="panel side-panel">
+
+          <!-- 헤더 -->
           <div class="header-row">
             <div class="logo-box">MAPLE<br>MINIGAME</div>
-            <div class="title-box">오목한판요</div>
+            <div class="title-box">윷놀이한판요</div>
           </div>
 
-          <section class="upper-frame">
-            <div class="player-area">
-              <article class="host-card" aria-label="현재 턴 플레이어">
-                <div class="host-portrait-wrap">
-                  <div class="portrait">
-                    <svg viewBox="0 0 72 88" role="img" aria-label="플레이어 아바타">
-                      <ellipse cx="36" cy="80" rx="16" ry="4" fill="rgba(68,88,105,0.24)"/>
-                      <path d="M16 72 L29 48 L43 48 L56 72 Z" fill="#325f9a"/>
-                      <path d="M30 48 L42 48 L46 72 L26 72 Z" fill="#fafafa"/>
-                      <path d="M22 34 C22 18 29 9 39 9 C49 9 54 16 53 27 C52 39 46 46 37 46 C27 46 22 41 22 34 Z" fill="#ffd8b3"/>
-                      <path d="M18 29 C18 12 28 4 41 4 C50 4 59 11 58 23 C57 27 54 29 50 30 C47 21 42 17 35 17 C28 17 24 22 22 30 C20 31 19 30 18 29 Z" fill="#8a6438"/>
-                      <circle cx="31" cy="30" r="1.5" fill="#29221b"/>
-                      <circle cx="42" cy="30" r="1.5" fill="#29221b"/>
-                      <path d="M33 38 C36 40 39 40 42 38" stroke="#9f6d57" stroke-width="1.6" fill="none" stroke-linecap="round"/>
-                      <path d="M16 72 L12 78 L17 78 L21 72 Z" fill="#5f4325"/>
-                      <path d="M56 72 L60 78 L55 78 L51 72 Z" fill="#5f4325"/>
-                      <path d="M49 40 L59 31 L62 34 L53 43 Z" fill="#ff9c34"/>
-                      <circle cx="61" cy="29" r="5" fill="#ff9330"/>
-                      <path d="M57 27 L65 30" stroke="#ffe1a8" stroke-width="1.5" stroke-linecap="round"/>
-                    </svg>
-                  </div>
-                </div>
-                <div class="host-meta">
-                  <div class="host-name">DK로스</div>
-                  <div class="score">2043 점</div>
-                  <div class="record">
-                    <span class="record-title">전적</span>
-                    <span class="record-lines">41 승<br>32 패<br>13 무</span>
-                  </div>
-                  <div class="token-sprite panda" aria-hidden="true">
-                    <div class="head"></div>
-                    <div class="feet"></div>
-                  </div>
-                </div>
-              </article>
-
-              <div class="seat-block" aria-label="상대 플레이어 영역">
-                <div class="seat-grid">
-                  <div class="seat occupied">
-                    <span class="seat-close" aria-hidden="true"></span>
-                    <div class="portrait">
-                      <svg viewBox="0 0 72 88" role="img" aria-label="상대 아바타">
-                        <ellipse cx="36" cy="80" rx="16" ry="4" fill="rgba(68,88,105,0.24)"/>
-                        <path d="M18 71 L30 48 L44 48 L56 71 Z" fill="#ad68c9"/>
-                        <path d="M32 47 L40 47 L45 71 L27 71 Z" fill="#fff7ff"/>
-                        <path d="M22 34 C22 19 28 10 37 10 C47 10 52 16 52 27 C52 38 46 46 36 46 C27 46 22 41 22 34 Z" fill="#ffe3c4"/>
-                        <path d="M17 28 C18 16 27 7 38 7 C46 7 55 12 56 22 C54 21 52 21 49 21 C44 15 39 13 33 13 C27 13 22 18 19 24 C18 25 18 27 17 28 Z" fill="#f0d96b"/>
-                        <path d="M18 22 C20 12 27 6 36 5" stroke="#fff2a0" stroke-width="4" stroke-linecap="round"/>
-                        <path d="M34 7 C41 5 49 7 55 12" stroke="#fff2a0" stroke-width="4" stroke-linecap="round"/>
-                        <circle cx="31" cy="31" r="1.5" fill="#29221b"/>
-                        <circle cx="42" cy="31" r="1.5" fill="#29221b"/>
-                        <path d="M33 38 C36 40 39 40 42 38" stroke="#9f6d57" stroke-width="1.6" fill="none" stroke-linecap="round"/>
-                        <path d="M20 27 L12 31 L18 37" fill="none" stroke="#fff2a0" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M54 23 L62 28 L58 36" fill="none" stroke="#fff2a0" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M51 53 L62 46 L58 57 Z" fill="#ffcf57" stroke="#ad7a17" stroke-width="1"/>
-                      </svg>
-                    </div>
-                  </div>
-                  <div class="seat empty-seat"></div>
-                  <div class="seat empty-seat"></div>
-                </div>
-                <div class="rival-info">
-                  <div class="rival-name">누드깐</div>
-                  <div class="rival-score">1969 점</div>
-                  <div class="rival-record">
-                    <span>전적</span>
-                    <span class="rival-record-lines">0 승<br>2 패<br>0 무</span>
-                  </div>
-                  <div class="token-sprite pig" aria-hidden="true">
-                    <div class="head"></div>
-                    <div class="feet"></div>
-                  </div>
-                </div>
+          <!-- 플레이어 정보 -->
+          <section class="frame player-frame">
+            <div class="player-cards">
+              <div id="host-card" class="pcard host">
+                <div id="host-name" class="pcard-name">대기 중</div>
+                <div class="pcard-color"></div>
+                <div id="host-pieces" class="pcard-pieces"></div>
+              </div>
+              <div id="guest-card" class="pcard guest">
+                <div id="guest-name" class="pcard-name">대기 중...</div>
+                <div class="pcard-color"></div>
+                <div id="guest-pieces" class="pcard-pieces"></div>
               </div>
             </div>
           </section>
 
-          <div class="start-frame">
-            <div class="start-row">
-              <div class="start-divider" aria-hidden="true"></div>
-              <button class="start-button" type="button">START!!</button>
-            </div>
+          <!-- 타이머 -->
+          <div class="timer-wrap">
+            <div class="timer-track"><div id="timer-bar" class="timer-fill" style="width:0%"></div></div>
+            <span id="timer-text"></span>
           </div>
 
-          <section class="chat-frame" aria-label="채팅 영역">
+          <!-- 윷 던지기 / 액션 -->
+          <div class="frame yut-frame">
+            <div id="yut-sticks"></div>
+            <div id="yut-result" class="yut-result"></div>
+            <button id="btn-start" class="game-btn primary" type="button" style="display:none">START!!</button>
+            <button id="btn-throw" class="game-btn primary" type="button" style="display:none">윷 던지기</button>
+            <button id="btn-again" class="game-btn" type="button" style="display:none">다시하기</button>
+            <div id="off-board-area"></div>
+          </div>
+
+          <!-- 채팅 -->
+          <section class="frame chat-frame">
             <div class="chat-shell">
               <div class="chat-box">
-                <div class="chat-log">
-                  <p>누드깐 : 이건또무슨페이스임,,,,</p>
-                  <p>DK로스 : ,,,,,,,,,,,,,,,,,,,,,</p>
-                  <p>DK로스 : 엑스임;</p>
-                  <p>DK로스 : ㄷㄷ;</p>
-                </div>
-                <div class="chat-scrollbar" aria-hidden="true">
-                  <div class="scroll-arrow up"></div>
-                  <div class="scroll-track">
-                    <div class="scroll-thumb"></div>
-                  </div>
-                  <div class="scroll-arrow down"></div>
-                </div>
+                <div id="chat-log" class="chat-log"></div>
               </div>
             </div>
-
             <div class="chat-input-row">
-              <input class="chat-input" type="text" value="" placeholder="">
-              <div class="send-icon" aria-hidden="true"></div>
+              <input id="chat-input" class="chat-input" type="text" placeholder="채팅 입력...">
             </div>
           </section>
 
-          <div class="actions-frame">
+          <!-- 하단 버튼 -->
+          <div class="frame actions-frame">
             <div class="actions">
               <div class="left-actions">
-                <button class="mini-btn" type="button">기권</button>
-                <button class="mini-btn" type="button">무승부</button>
-                <button class="mini-btn" type="button">무르기</button>
+                <button id="btn-forfeit" class="mini-btn" type="button" style="display:none">기권</button>
               </div>
-              <button class="mini-btn exit" type="button">나가기</button>
+              <button id="btn-leave" class="mini-btn exit" type="button">나가기</button>
             </div>
           </div>
+
         </aside>
       </div>
     </div>
   </main>
 
-  <script>
-    const boardPlayfield = document.getElementById("boardPlayfield");
-    const stones = [
-      { x: 0, y: 0, type: "pig" },
-      { x: 1, y: 1, type: "panda" },
-      { x: 2, y: 2, type: "pig" },
-      { x: 3, y: 3, type: "panda" },
-      { x: 4, y: 4, type: "pig" },
-      { x: 5, y: 5, type: "panda" },
-      { x: 6, y: 6, type: "pig" },
-      { x: 7, y: 7, type: "panda" },
-      { x: 8, y: 8, type: "pig" },
-      { x: 9, y: 9, type: "panda" },
-      { x: 10, y: 10, type: "pig" },
-      { x: 11, y: 11, type: "panda" },
-      { x: 12, y: 12, type: "pig" },
-      { x: 13, y: 13, type: "panda" },
-      { x: 14, y: 14, type: "pig" },
-      { x: 0, y: 14, type: "panda" },
-      { x: 1, y: 13, type: "pig" },
-      { x: 2, y: 12, type: "panda" },
-      { x: 3, y: 11, type: "pig" },
-      { x: 4, y: 10, type: "panda" },
-      { x: 5, y: 9, type: "pig" },
-      { x: 6, y: 8, type: "panda" },
-      { x: 7, y: 7, type: "pig" },
-      { x: 8, y: 6, type: "panda" },
-      { x: 9, y: 5, type: "pig" },
-      { x: 10, y: 4, type: "panda" },
-      { x: 11, y: 3, type: "pig" },
-      { x: 12, y: 2, type: "panda" },
-      { x: 13, y: 1, type: "pig" }
-    ];
-
-    const toPercent = (value) => (value / 14) * 100;
-
-    stones.forEach(({ x, y, type }) => {
-      const stone = document.createElement("div");
-      stone.className = `stone ${type}`;
-      stone.style.left = `${toPercent(x)}%`;
-      stone.style.top = `${toPercent(y)}%`;
-
-      const head = document.createElement("div");
-      head.className = "head";
-      const feet = document.createElement("div");
-      feet.className = "feet";
-
-      stone.append(head, feet);
-      boardPlayfield.appendChild(stone);
-    });
-  </script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/shared/game-logic.js"></script>
+  <script src="/js/board.js"></script>
+  <script src="/js/client.js"></script>
 </body>
 </html>
