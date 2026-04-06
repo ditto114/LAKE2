@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Retro Maple Minigame Template</title>
+  <style>
+    :root {
+      --bg-top: #d9ecf6;
+      --bg-bottom: #b8d0df;
+      --panel-fill: #f9fcff;
+      --panel-fill-soft: #edf5fa;
+      --outer-line: #cfe4f1;
+      --inner-line: #446986;
+      --inner-shadow: #b7cad8;
+      --screw: #7e9db7;
+      --progress-1: #f7fbfe;
+      --progress-2: #d8e7f2;
+      --progress-3: #c7dae8;
+      --status-dark: #20242a;
+      --status-mid: #2c3945;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+    }
+
+    body {
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.05)),
+        repeating-linear-gradient(
+          0deg,
+          rgba(255, 255, 255, 0.08) 0 2px,
+          rgba(133, 161, 183, 0.08) 2px 4px
+        ),
+        linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
+      color: #2e3942;
+      font-family: "Galmuri11", "DungGeunMo", "PF Stardust", "GulimChe", monospace;
+      image-rendering: pixelated;
+    }
+
+    .window {
+      width: min(96vw, 980px);
+      aspect-ratio: 735 / 431;
+      padding: 2px;
+      background: #bdd3e1;
+      border: 2px solid #4d6f8a;
+      box-shadow:
+        0 0 0 1px #edf8ff,
+        0 0 0 2px #89a7bc,
+        0 14px 34px rgba(34, 56, 74, 0.22);
+    }
+
+    .window-inner {
+      width: 100%;
+      height: 100%;
+      padding: 0;
+      background: var(--outer-line);
+      border: 1px solid #e8f6ff;
+      box-shadow:
+        inset 1px 1px 0 #ffffff,
+        inset -1px -1px 0 #97b0c3;
+    }
+
+    .template {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      grid-template-columns: 54.15% 45.85%;
+      gap: 0;
+    }
+
+    .left-column {
+      display: grid;
+      grid-template-rows: 93.1% 6.9%;
+      gap: 0;
+      min-width: 0;
+      min-height: 0;
+    }
+
+    .right-column {
+      display: grid;
+      grid-template-rows: 7.4% 56.4% 29.2% 7%;
+      gap: 0;
+      min-width: 0;
+      min-height: 0;
+      margin-left: -2px;
+    }
+
+    .pixel-panel {
+      position: relative;
+      min-width: 0;
+      min-height: 0;
+      border: 2px solid var(--outer-line);
+      box-shadow:
+        inset 0 0 0 1px var(--inner-line),
+        inset 1px 1px 0 #ffffff,
+        inset -1px -1px 0 var(--inner-shadow);
+      background:
+        radial-gradient(circle at 4px 4px, var(--screw) 0 1px, transparent 1.1px),
+        radial-gradient(circle at calc(100% - 4px) 4px, var(--screw) 0 1px, transparent 1.1px),
+        radial-gradient(circle at 4px calc(100% - 4px), var(--screw) 0 1px, transparent 1.1px),
+        radial-gradient(circle at calc(100% - 4px) calc(100% - 4px), var(--screw) 0 1px, transparent 1.1px),
+        linear-gradient(180deg, var(--panel-fill), var(--panel-fill-soft));
+      overflow: hidden;
+    }
+
+    .left-column > * + * {
+      margin-top: -2px;
+    }
+
+    .right-column > * + * {
+      margin-top: -2px;
+    }
+
+    .header > * + * {
+      margin-left: -2px;
+    }
+
+    .canvas-panel {
+      background:
+        radial-gradient(circle at 4px 4px, var(--screw) 0 1px, transparent 1.1px),
+        radial-gradient(circle at calc(100% - 4px) 4px, var(--screw) 0 1px, transparent 1.1px),
+        radial-gradient(circle at 4px calc(100% - 4px), var(--screw) 0 1px, transparent 1.1px),
+        radial-gradient(circle at calc(100% - 4px) calc(100% - 4px), var(--screw) 0 1px, transparent 1.1px),
+        #ffffff;
+    }
+
+    .canvas-panel::after,
+    .list-panel::after,
+    .info-panel::after {
+      content: "";
+      position: absolute;
+      inset: 10px;
+      border: 1px dashed rgba(94, 125, 150, 0.18);
+      pointer-events: none;
+    }
+
+    .bottom-bar,
+    .footer-bar {
+      padding: 3px 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background:
+        radial-gradient(circle at 4px 4px, var(--screw) 0 1px, transparent 1.1px),
+        radial-gradient(circle at calc(100% - 4px) 4px, var(--screw) 0 1px, transparent 1.1px),
+        radial-gradient(circle at 4px calc(100% - 4px), var(--screw) 0 1px, transparent 1.1px),
+        radial-gradient(circle at calc(100% - 4px) calc(100% - 4px), var(--screw) 0 1px, transparent 1.1px),
+        #f8fbfd;
+    }
+
+    .clock {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 2px solid #c37d21;
+      box-shadow:
+        inset 1px 1px 0 rgba(255, 255, 255, 0.8),
+        inset -1px -1px 0 rgba(133, 88, 20, 0.45);
+      background:
+        radial-gradient(circle at 35% 30%, #fff9dc 0, #ffe49f 48%, #efb54f 100%);
+      position: relative;
+    }
+
+    .clock::before,
+    .clock::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      background: #544437;
+      transform-origin: bottom center;
+      border-radius: 1px;
+    }
+
+    .clock::before {
+      width: 2px;
+      height: 5px;
+      transform: translate(-50%, -100%) rotate(0deg);
+    }
+
+    .clock::after {
+      width: 2px;
+      height: 4px;
+      transform: translate(-50%, -100%) rotate(55deg);
+    }
+
+    .header {
+      display: grid;
+      grid-template-columns: 27.8% 72.2%;
+      gap: 0;
+      min-width: 0;
+    }
+
+    .brand-box,
+    .progress-shell {
+      min-width: 0;
+      min-height: 0;
+    }
+
+    .brand-box {
+      padding: 6px 8px 4px;
+      display: flex;
+      align-items: center;
+      line-height: 1.05;
+      letter-spacing: 0;
+      font-size: 10px;
+      color: #2f3942;
+      background:
+        radial-gradient(circle at 4px 4px, var(--screw) 0 1px, transparent 1.1px),
+        radial-gradient(circle at calc(100% - 4px) 4px, var(--screw) 0 1px, transparent 1.1px),
+        radial-gradient(circle at 4px calc(100% - 4px), var(--screw) 0 1px, transparent 1.1px),
+        radial-gradient(circle at calc(100% - 4px) calc(100% - 4px), var(--screw) 0 1px, transparent 1.1px),
+        linear-gradient(180deg, #fefefe, #e4edf4);
+    }
+
+    .brand-box strong {
+      font-weight: normal;
+      display: block;
+    }
+
+    .progress-shell {
+      padding: 3px 6px;
+      display: flex;
+      align-items: center;
+      background:
+        radial-gradient(circle at 4px 4px, var(--screw) 0 1px, transparent 1.1px),
+        radial-gradient(circle at calc(100% - 4px) 4px, var(--screw) 0 1px, transparent 1.1px),
+        radial-gradient(circle at 4px calc(100% - 4px), var(--screw) 0 1px, transparent 1.1px),
+        radial-gradient(circle at calc(100% - 4px) calc(100% - 4px), var(--screw) 0 1px, transparent 1.1px),
+        linear-gradient(180deg, #fefefe, #e4edf4);
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 14px;
+      border: 1px solid #d9e8f3;
+      box-shadow:
+        inset 0 0 0 1px #67849d,
+        inset 1px 1px 0 #ffffff;
+      background:
+        linear-gradient(180deg, var(--progress-1), var(--progress-2) 55%, var(--progress-3));
+      position: relative;
+      overflow: hidden;
+    }
+
+    .progress-track::before {
+      content: "";
+      position: absolute;
+      inset: 2px auto 2px 2px;
+      width: 68%;
+      background:
+        repeating-linear-gradient(
+          90deg,
+          rgba(255, 255, 255, 0.45) 0 3px,
+          rgba(255, 255, 255, 0.08) 3px 6px
+        ),
+        linear-gradient(180deg, #eaf4fb, #d6e7f3);
+      border-right: 1px solid rgba(86, 120, 148, 0.18);
+    }
+
+    .list-panel,
+    .info-panel {
+      background:
+        radial-gradient(circle at 4px 4px, var(--screw) 0 1px, transparent 1.1px),
+        radial-gradient(circle at calc(100% - 4px) 4px, var(--screw) 0 1px, transparent 1.1px),
+        radial-gradient(circle at 4px calc(100% - 4px), var(--screw) 0 1px, transparent 1.1px),
+        radial-gradient(circle at calc(100% - 4px) calc(100% - 4px), var(--screw) 0 1px, transparent 1.1px),
+        #ffffff;
+    }
+
+    .footer-bar {
+      justify-content: space-between;
+      gap: 12px;
+      padding-inline: 10px;
+    }
+
+    .status-chip,
+    .status-chip-small {
+      height: 16px;
+      border: 1px solid #d6e4ef;
+      box-shadow:
+        inset 0 0 0 1px #4f6d88,
+        inset 1px 1px 0 rgba(255, 255, 255, 0.15);
+      background: linear-gradient(180deg, var(--status-dark), var(--status-mid));
+    }
+
+    .status-chip {
+      width: 48%;
+    }
+
+    .status-chip-small {
+      width: 14%;
+    }
+
+    .placeholder-label {
+      position: absolute;
+      inset: auto 10px 10px auto;
+      font-size: 10px;
+      color: rgba(86, 110, 127, 0.35);
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+    }
+
+    @media (max-width: 760px) {
+      body {
+        padding: 10px;
+      }
+
+      .window {
+        width: 100%;
+      }
+
+      .template {
+        grid-template-columns: 1fr;
+        grid-template-rows: 1.45fr 1fr;
+      }
+
+      .right-column {
+        grid-template-rows: 30px minmax(160px, 1fr) 90px 28px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="window">
+    <div class="window-inner">
+      <section class="template" aria-label="Retro Maple Minigame Template">
+        <div class="left-column">
+          <section class="pixel-panel canvas-panel">
+            <span class="placeholder-label">MINIGAME CANVAS</span>
+          </section>
+
+          <section class="pixel-panel bottom-bar">
+            <span class="clock" aria-hidden="true"></span>
+          </section>
+        </div>
+
+        <div class="right-column">
+          <header class="header">
+            <section class="pixel-panel brand-box" aria-label="Maple Minigame Brand">
+              <strong>MAPLE</strong>
+              <strong>MINIGAME</strong>
+            </section>
+
+            <section class="pixel-panel progress-shell" aria-label="Progress Area">
+              <div class="progress-track" aria-hidden="true"></div>
+            </section>
+          </header>
+
+          <section class="pixel-panel list-panel" aria-label="User List Or Log Area">
+            <span class="placeholder-label">LIST / LOG</span>
+          </section>
+
+          <section class="pixel-panel info-panel" aria-label="Chat Input Or Point Area">
+            <span class="placeholder-label">INFO / CHAT</span>
+          </section>
+
+          <section class="pixel-panel footer-bar" aria-label="Bottom Status Strip">
+            <div class="status-chip" aria-hidden="true"></div>
+            <div class="status-chip-small" aria-hidden="true"></div>
+          </section>
+        </div>
+      </section>
+    </div>
+  </main>
+</body>
+</html>
