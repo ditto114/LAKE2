@@ -165,6 +165,31 @@
     }
     #canvas { display: block; }
 
+    /* 보드 위 던지기 버튼 오버레이 */
+    #btn-throw {
+      position: absolute;
+      left: 50%;
+      top: 71%;
+      transform: translate(-50%, -50%);
+      z-index: 10;
+      height: auto;
+      min-width: 80px;
+      padding: 5px 14px;
+      line-height: 1.25;
+      font-size: 9.5pt;
+      text-align: center;
+      white-space: pre;
+      border: 1px solid #1a5487;
+      background: linear-gradient(180deg, var(--blue-btn-top), var(--blue-btn-mid) 68%, var(--blue-btn-bottom));
+      box-shadow: inset 1px 1px 0 rgba(255,255,255,.6), inset -1px -1px 0 rgba(11,63,113,.45),
+                  0 2px 6px rgba(0,0,0,.25);
+      color: #fff;
+      text-shadow: 1px 1px 0 rgba(9,55,98,.6);
+      font-weight: bold;
+      cursor: pointer;
+    }
+    #btn-throw:active { transform: translate(-50%, calc(-50% + 1px)); }
+
     .status-frame {
       min-height: 30px;
       border: 2px solid #6f879b;
@@ -191,7 +216,7 @@
 
     .side-panel {
       display: grid;
-      grid-template-rows: 30px 110px 14px 70px minmax(0,1fr) 30px;
+      grid-template-rows: 30px 110px 14px 90px minmax(0,1fr) 30px;
       gap: 2px;
     }
 
@@ -277,7 +302,24 @@
       0%   { transform: scale(1.8); opacity: .5; }
       100% { transform: scale(1);   opacity: 1; }
     }
-    #off-board-area { display: flex; gap: 4px; }
+    /* 던진 결과 큐 */
+    .throw-queue {
+      display: flex;
+      gap: 3px;
+      justify-content: center;
+      flex-wrap: wrap;
+      min-height: 0;
+    }
+    .throw-chip {
+      display: inline-block;
+      padding: 2px 8px;
+      border: 1px solid #8a9aaa;
+      border-radius: 3px;
+      background: linear-gradient(180deg, #f4f4f4, #d8dce0);
+      font-size: 9pt;
+      font-weight: bold;
+      color: #444;
+    }
 
     .game-btn {
       height: 30px;
@@ -313,18 +355,22 @@
       box-shadow: inset 1px 1px 0 #fff, inset -1px -1px 0 #d4dce4;
       padding: 1px;
       min-height: 0;
+      overflow: hidden;
     }
     .chat-box {
+      position: relative;
       height: 100%;
       background: var(--chat-bg);
       border: 1px solid #767f88;
       overflow: hidden;
     }
     .chat-log {
-      height: 100%;
+      position: absolute;
+      inset: 0;
       padding: 6px;
       color: #f0f0f0;
       overflow-y: auto;
+      overflow-x: hidden;
       line-height: 1.35;
       font-size: 8.5pt;
     }
@@ -488,6 +534,7 @@
           <div class="board-shell">
             <div class="board">
               <canvas id="canvas"></canvas>
+              <button id="btn-throw" type="button" style="display:none">윷 던지기&#10;(Space)</button>
             </div>
           </div>
           <div class="status-frame">
@@ -533,10 +580,9 @@
           <div class="frame yut-frame">
             <div id="yut-sticks"></div>
             <div id="yut-result" class="yut-result"></div>
+            <div id="throw-queue" class="throw-queue"></div>
             <button id="btn-start" class="game-btn primary" type="button" style="display:none">START!!</button>
-            <button id="btn-throw" class="game-btn primary" type="button" style="display:none">윷 던지기</button>
             <button id="btn-again" class="game-btn" type="button" style="display:none">다시하기</button>
-            <div id="off-board-area"></div>
           </div>
 
           <!-- 채팅 -->
