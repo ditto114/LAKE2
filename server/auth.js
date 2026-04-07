@@ -5,6 +5,24 @@ const supabase = require('./supabase');
 const JWT_SECRET = process.env.JWT_SECRET;
 const SALT_ROUNDS = 10;
 
+// 한글 2바이트, 그 외 1바이트로 계산하는 바이트 길이
+function byteLen(str) {
+  let n = 0;
+  for (const ch of str) n += ch.charCodeAt(0) > 127 ? 2 : 1;
+  return n;
+}
+
+// 최대 maxBytes 바이트까지 잘라냄
+function truncateBytes(str, maxBytes) {
+  let n = 0, result = '';
+  for (const ch of str) {
+    const b = ch.charCodeAt(0) > 127 ? 2 : 1;
+    if (n + b > maxBytes) break;
+    n += b; result += ch;
+  }
+  return result;
+}
+
 // ── 토큰 블랙리스트 (인메모리) ──
 const tokenBlacklist = new Set();
 
@@ -25,11 +43,11 @@ async function signup(nickname, password, ingameNickname) {
   if (!nickname || !password || !ingameNickname) {
     return { error: '모든 항목을 입력해주세요.' };
   }
-  nickname = nickname.trim().slice(0, 12);
-  ingameNickname = ingameNickname.trim().slice(0, 12);
+  nickname = truncateBytes(nickname.trim(), 12);
+  ingameNickname = truncateBytes(ingameNickname.trim(), 12);
   if (!nickname) return { error: '닉네임을 입력해주세요.' };
   if (password.length < 4) return { error: '비밀번호는 4자 이상이어야 합니다.' };
-  if (!ingameNickname) return { error: '인게임 닉네임을 입력해주세요.' };
+  if (!ingameNickname) return { error: '메랜 닉네임을 입력해주세요.' };
 
   // 닉네임 중복 확인
   const { data: existing } = await supabase
@@ -41,14 +59,14 @@ async function signup(nickname, password, ingameNickname) {
     return { error: '이미 사용 중인 닉네임입니다.' };
   }
 
-  // 인게임 닉네임 중복 확인
+  // 메랜 닉네임 중복 확인
   const { data: existingIngame } = await supabase
     .from('users')
     .select('id')
     .ilike('ingame_nickname', ingameNickname)
     .limit(1);
   if (existingIngame && existingIngame.length > 0) {
-    return { error: '이미 사용 중인 인게임 닉네임입니다.' };
+    return { error: '이미 사용 중인 메랜 닉네임입니다.' };
   }
 
   // 비밀번호 해시 및 저장
@@ -56,7 +74,7 @@ async function signup(nickname, password, ingameNickname) {
   const { data, error } = await supabase
     .from('users')
     .insert({ nickname, password_hash: passwordHash, ingame_nickname: ingameNickname })
-    .select('id, nickname, ingame_nickname, elixir')
+    .select('id, nickname, ingame_nickname, elixir, equipped_avatar')
     .single();
 
   if (error) return { error: '회원가입에 실패했습니다.' };
@@ -66,7 +84,7 @@ async function signup(nickname, password, ingameNickname) {
   return {
     success: true,
     token,
-    user: { id: data.id, nickname: data.nickname, ingameNickname: data.ingame_nickname, elixir: data.elixir },
+    user: { id: data.id, nickname: data.nickname, ingameNickname: data.ingame_nickname, elixir: data.elixir, equippedAvatar: data.equipped_avatar },
   };
 }
 
@@ -75,7 +93,7 @@ async function login(nickname, password) {
 
   const { data, error } = await supabase
     .from('users')
-    .select('id, nickname, password_hash, ingame_nickname, elixir')
+    .select('id, nickname, password_hash, ingame_nickname, elixir, equipped_avatar')
     .ilike('nickname', nickname.trim())
     .single();
 
@@ -89,7 +107,7 @@ async function login(nickname, password) {
   return {
     success: true,
     token,
-    user: { id: data.id, nickname: data.nickname, ingameNickname: data.ingame_nickname, elixir: data.elixir },
+    user: { id: data.id, nickname: data.nickname, ingameNickname: data.ingame_nickname, elixir: data.elixir, equippedAvatar: data.equipped_avatar },
   };
 }
 
@@ -99,11 +117,11 @@ async function verifyToken(token) {
     const decoded = jwt.verify(token, JWT_SECRET);
     const { data, error } = await supabase
       .from('users')
-      .select('id, nickname, ingame_nickname, elixir')
+      .select('id, nickname, ingame_nickname, elixir, equipped_avatar')
       .eq('id', decoded.userId)
       .single();
     if (error || !data) return null;
-    return { id: data.id, nickname: data.nickname, ingameNickname: data.ingame_nickname, elixir: data.elixir };
+    return { id: data.id, nickname: data.nickname, ingameNickname: data.ingame_nickname, elixir: data.elixir, equippedAvatar: data.equipped_avatar };
   } catch {
     return null;
   }

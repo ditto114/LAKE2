@@ -13,6 +13,7 @@ const path = require('path');
 const RoomManager = require('./room-manager');
 const G = require('../shared/game-logic');
 const auth = require('./auth');
+const shop = require('./shop');
 
 const rateLimit = require('express-rate-limit');
 
@@ -83,6 +84,36 @@ app.post('/api/auth/logout', (req, res) => {
     auth.blacklistToken(header.slice(7));
   }
   res.json({ success: true });
+});
+
+// ═══════════════════════════════════════════════════════
+//  REST API — 상점 / 인벤토리
+// ═══════════════════════════════════════════════════════
+
+async function requireAuth(req, res) {
+  const header = req.headers.authorization;
+  if (!header?.startsWith('Bearer ')) { res.json({ error: '인증 필요' }); return null; }
+  const user = await auth.verifyToken(header.slice(7));
+  if (!user) { res.json({ error: '유효하지 않은 토큰' }); return null; }
+  return user;
+}
+
+app.get('/api/shop', async (req, res) => {
+  const user = await requireAuth(req, res); if (!user) return;
+  const ownedItems = await shop.getInventory(user.id);
+  res.json({ items: shop.SHOP_ITEMS, ownedItems, elixir: user.elixir, equippedAvatar: user.equippedAvatar });
+});
+
+app.post('/api/shop/buy', async (req, res) => {
+  const user = await requireAuth(req, res); if (!user) return;
+  const result = await shop.buyItem(user.id, req.body.itemId);
+  res.json(result);
+});
+
+app.post('/api/inventory/equip', async (req, res) => {
+  const user = await requireAuth(req, res); if (!user) return;
+  const result = await shop.equipAvatar(user.id, req.body.avatarId ?? null);
+  res.json(result);
 });
 
 // ═══════════════════════════════════════════════════════
@@ -262,7 +293,7 @@ io.on('connection', (socket) => {
       socket.join(currentRoomCode);
       socket.emit('session-resumed', {
         room: roomInfo(room),
-        players: room.players.map(p => ({ id: p.id, nickname: p.nickname })),
+        players: room.players.map(p => ({ id: p.id, nickname: p.nickname, equippedAvatar: p.equippedAvatar })),
         state: room.gameState ? sanitizeState(room.gameState) : null,
         timerEnd: room.timerEnd ?? null,
         readyPlayers: [...room.readyPlayers],
@@ -275,7 +306,7 @@ io.on('connection', (socket) => {
 
   socket.on('create-room', (_, ack) => {
     if (currentRoomCode) return emitError(socket, ack, '이미 방에 참가 중입니다.');
-    const room = roomManager.createRoom(userId, nickname);
+    const room = roomManager.createRoom(userId, nickname, socket.user.equippedAvatar);
     currentRoomCode = room.code;
     socket.join(room.code);
     const r = { room: roomInfo(room) };
@@ -285,7 +316,7 @@ io.on('connection', (socket) => {
 
   socket.on('join-room', (code, ack) => {
     if (currentRoomCode) return emitError(socket, ack, '이미 방에 참가 중입니다.');
-    const result = roomManager.joinRoom(String(code).toUpperCase(), userId, nickname);
+    const result = roomManager.joinRoom(String(code).toUpperCase(), userId, nickname, socket.user.equippedAvatar);
     if (result.error) return emitError(socket, ack, result.error);
     const room = result.room;
     currentRoomCode = room.code;
@@ -329,7 +360,7 @@ io.on('connection', (socket) => {
     room.gameState = G.createGameState(room.players.map(p => p.id));
     room.playerNicknameMap = new Map(room.players.map(p => [p.id, p.nickname]));
     io.to(room.code).emit('game-started', {
-      players: room.players.map(p => ({ id: p.id, nickname: p.nickname })),
+      players: room.players.map(p => ({ id: p.id, nickname: p.nickname, equippedAvatar: p.equippedAvatar })),
       state: sanitizeState(room.gameState),
     });
     startTimer(room);
@@ -417,6 +448,16 @@ io.on('connection', (socket) => {
     } else {
       io.to(room.code).emit('player-forfeited', { playerId: userId, state: sanitizeState(room.gameState) });
       startTimer(room);
+    }
+  });
+
+  // ── 아바타 갱신 ──
+  socket.on('update-avatar', (avatarId) => {
+    socket.user.equippedAvatar = avatarId || null;
+    const room = currentRoomCode ? roomManager.getRoom(currentRoomCode) : null;
+    if (room) {
+      const p = room.players.find(p => p.id === userId);
+      if (p) p.equippedAvatar = avatarId || null;
     }
   });
 

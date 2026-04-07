@@ -28,6 +28,35 @@
   let roomListTimer = null;
   let readySet = new Set();
 
+  // 아바타 이미지 캐시
+  const _avatarImgCache = {};
+  function loadAvatarImg(avatarId) {
+    if (!avatarId) return null;
+    if (!_avatarImgCache[avatarId]) {
+      const img = new Image();
+      const num = avatarId.replace('avatar_', '');
+      img.src = `/assets/P${num}.png`;
+      img.onload = () => { if (gameState) updateGame(); };
+      _avatarImgCache[avatarId] = img;
+    }
+    return _avatarImgCache[avatarId];
+  }
+
+  function buildAvatarMap(playerList) {
+    const avatarMap = {}, dupSet = new Set(), cnt = {};
+    playerList.forEach(p => { if (p.equippedAvatar) cnt[p.equippedAvatar] = (cnt[p.equippedAvatar] || 0) + 1; });
+    playerList.forEach((p, i) => {
+      if (p.equippedAvatar) {
+        avatarMap[i] = loadAvatarImg(p.equippedAvatar);
+        if (cnt[p.equippedAvatar] > 1) dupSet.add(i);
+      }
+    });
+    return { avatarMap, dupSet };
+  }
+
+  // 상점 데이터 캐시
+  let shopData = null;
+
   /* 사운드 */
   let audioCtx = null;
   function ensureAudio() {
@@ -256,6 +285,8 @@
         allMovable = gameState.phase === 'MOVING' && isMyTurn()
           ? YutGame.getAllMovablePieces(gameState) : [];
         clearSelection();
+        const { avatarMap, dupSet } = buildAvatarMap(d.players || []);
+        board.setPlayerAvatars(avatarMap, dupSet);
         showScreen('game');
         updateGame();
         if (d.timerEnd) {
@@ -313,6 +344,8 @@
       gameState = d.state;
       allMovable = []; clearSelection();
       readySet = new Set();
+      const { avatarMap, dupSet } = buildAvatarMap(d.players);
+      board.setPlayerAvatars(avatarMap, dupSet);
       // 말 그리드 초기화
       for (let i = 0; i < 4; i++) { const g = $('p' + i + '-pieces'); if (g) g.innerHTML = ''; }
       $('chat-log').innerHTML = '';
@@ -382,6 +415,8 @@
         const col       = board.playerColor(playerIdx);
         const cnt       = (oldPiece.stackedWith ? oldPiece.stackedWith.length : 0) + 1;
         const animIds   = [d.pieceId, ...(oldPiece.stackedWith || [])];
+        const animAvatarImg = board.playerAvatars[playerIdx] || null;
+        const animIsDup = board.dupAvatarPlayers.has(playerIdx);
 
         // 출발 캔버스 좌표
         let fromCoord;
@@ -405,7 +440,7 @@
             ? YutGame.getAllMovablePieces(gameState) : [];
           updateGame();
           autoSelectIfAllWaiting();
-        });
+        }, animAvatarImg, animIsDup);
       } else {
         // pieceId 없는 경우 (예외)
         gameState = d.state;
@@ -552,6 +587,12 @@
         }
       });
     });
+
+    $('btn-inventory').onclick = openInventory;
+    $('btn-shop').onclick = openShop;
+    $('modal-inventory-close').onclick = () => { $('modal-inventory').style.display = 'none'; };
+    $('modal-shop-close').onclick = () => { $('modal-shop').style.display = 'none'; };
+    $('btn-unequip').onclick = () => equipAvatar(null);
 
     /* Space 키 → 윷 던지기 */
     window.addEventListener('keydown', (e) => {
@@ -718,7 +759,9 @@
     if (isHost) {
       setActionArea('start');
       const hasGuest = room.players.length >= 2;
-      $('btn-start').disabled = !hasGuest || !allReady;
+      const startEnabled = hasGuest && allReady;
+      $('btn-start').disabled = !startEnabled;
+      $('btn-start').querySelector('img').src = startEnabled ? '/assets/Game_START.png' : '/assets/Game_START_disabled.png';
       if (!hasGuest) {
         $('status-text').textContent = '상대를 기다리는 중...';
       } else if (allReady) {
@@ -728,8 +771,7 @@
       }
     } else {
       setActionArea('ready');
-      $('btn-ready').textContent = myReady ? 'UNREADY' : 'READY';
-      $('btn-ready').classList.toggle('ready-active', myReady);
+      $('btn-ready').style.opacity = myReady ? '0.6' : '1';
       $('status-text').textContent = myReady ? '준비 완료! 방장을 기다리는 중...' : '준비 버튼을 눌러주세요';
     }
 
@@ -780,12 +822,31 @@
     }
 
     const dots = grid.querySelectorAll('.piece-dot');
+    const avatarImg = board.playerAvatars[pidx] || null;
+    const isDup = board.dupAvatarPlayers.has(pidx);
+    const col = board.playerColor(pidx);
     pieces.forEach((piece, i) => {
       if (!dots[i]) return;
       dots[i].dataset.pieceId = piece.id;
       const waiting = piece.position === -1;
+      const isMovable = waiting && allMovable.includes(piece.id);
       dots[i].classList.toggle('gone', !waiting);
-      dots[i].classList.toggle('movable-dot', waiting && allMovable.includes(piece.id));
+      dots[i].classList.toggle('movable-dot', isMovable);
+      if (avatarImg && avatarImg.complete && avatarImg.naturalWidth > 0) {
+        dots[i].style.backgroundImage = `url(${avatarImg.src})`;
+        dots[i].style.backgroundSize = 'cover';
+        dots[i].style.backgroundPosition = 'center';
+        dots[i].style.borderRadius = isMovable ? '50%' : '0';
+        dots[i].style.border = 'none';
+        dots[i].style.filter = isDup ? `drop-shadow(0 0 1.3px ${col.f}) drop-shadow(0 0 1.3px ${col.f})` : '';
+      } else {
+        dots[i].style.backgroundImage = '';
+        dots[i].style.backgroundSize = '';
+        dots[i].style.backgroundPosition = '';
+        dots[i].style.borderRadius = '';
+        dots[i].style.border = '';
+        dots[i].style.filter = '';
+      }
     });
   }
 
@@ -862,5 +923,90 @@
 
   function isMyTurn() { return gameState && gameState.players[gameState.currentPlayer] === myId; }
   function currentNick() { return players[gameState?.currentPlayer]?.nickname || ''; }
+
+  /* ══════════════════════════════════════════
+     상점 / 인벤토리
+     ══════════════════════════════════════════ */
+
+  async function openShop() {
+    const res = await fetch('/api/shop', { headers: { Authorization: 'Bearer ' + authToken } });
+    shopData = await res.json();
+    renderShopModal(shopData);
+    $('modal-shop').style.display = '';
+  }
+
+  async function buyItem(itemId) {
+    const res = await fetch('/api/shop/buy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + authToken },
+      body: JSON.stringify({ itemId }),
+    });
+    const data = await res.json();
+    if (data.error) { alert(data.error); return; }
+    currentUser.elixir = data.elixir;
+    shopData.ownedItems = data.ownedItems;
+    shopData.elixir = data.elixir;
+    updateUserInfo();
+    renderShopModal(shopData);
+  }
+
+  async function openInventory() {
+    const res = await fetch('/api/shop', { headers: { Authorization: 'Bearer ' + authToken } });
+    shopData = await res.json();
+    currentUser.equippedAvatar = shopData.equippedAvatar;
+    renderInventoryModal(shopData);
+    $('modal-inventory').style.display = '';
+  }
+
+  async function equipAvatar(avatarId) {
+    const res = await fetch('/api/inventory/equip', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + authToken },
+      body: JSON.stringify({ avatarId: avatarId ?? null }),
+    });
+    const data = await res.json();
+    if (data.error) { alert(data.error); return; }
+    currentUser.equippedAvatar = data.equippedAvatar;
+    if (socket) socket.emit('update-avatar', data.equippedAvatar);
+    if (shopData) shopData.equippedAvatar = data.equippedAvatar;
+    renderInventoryModal(shopData);
+  }
+
+  function renderShopModal(data) {
+    const elixirEl = $('shop-elixir-display');
+    if (elixirEl) elixirEl.textContent = '(엘릭서: ' + data.elixir + ')';
+    const list = $('shop-list');
+    list.innerHTML = '';
+    data.items.forEach(item => {
+      const owned = data.ownedItems.includes(item.id);
+      const div = document.createElement('div');
+      div.className = 'shop-item';
+      const imgHtml = item.image ? `<img src="${item.image}" alt="${item.name}">` : `<div style="width:32px;height:32px;background:#dde;border:1px solid #aab;display:flex;align-items:center;justify-content:center;font-size:7pt">없음</div>`;
+      const btnLabel = item.type === 'consumable' ? '구매' : (owned ? '보유 중' : '구매');
+      const btnDisabled = (item.type === 'avatar' && owned) ? 'disabled' : '';
+      div.innerHTML = `${imgHtml}<div class="shop-item-info"><div>${item.name}</div><div style="color:#666;font-size:8pt">${item.desc}</div></div><div class="shop-item-price">${item.price > 0 ? item.price + '엘' : '무료'}</div><button class="lobby-btn" style="height:22px;padding:0 6px" ${btnDisabled}>${btnLabel}</button>`;
+      if (!btnDisabled) {
+        div.querySelector('button').onclick = () => buyItem(item.id);
+      }
+      list.appendChild(div);
+    });
+  }
+
+  function renderInventoryModal(data) {
+    const grid = $('inventory-grid');
+    grid.innerHTML = '';
+    const avatarItems = data.items.filter(i => i.type === 'avatar');
+    avatarItems.forEach(item => {
+      const owned = data.ownedItems.includes(item.id);
+      const equipped = data.equippedAvatar === item.id;
+      const div = document.createElement('div');
+      div.className = 'avatar-item' + (equipped ? ' equipped' : (owned ? ' owned' : ' locked'));
+      div.innerHTML = `<img src="${item.image}" alt="${item.name}"><div style="font-size:7pt;margin-top:2px">${equipped ? '장착 중' : (owned ? '보유' : '미보유')}</div>`;
+      if (owned) {
+        div.onclick = () => equipAvatar(equipped ? null : item.id);
+      }
+      grid.appendChild(div);
+    });
+  }
 
 })();

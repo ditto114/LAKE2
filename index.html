@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -22,22 +23,33 @@
       --orange-btn-bottom: #e26a00;
     }
 
-    * { box-sizing: border-box; }
-    html, body { margin: 0; min-height: 100%; }
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+    }
 
     body {
       display: grid;
       place-items: center;
       background:
-        linear-gradient(rgba(13,19,24,.14), rgba(13,19,24,.14)),
+        linear-gradient(rgba(13, 19, 24, .14), rgba(13, 19, 24, .14)),
         url("./assets/Map_3F3F.webp") center / cover no-repeat fixed;
       padding: 16px;
       color: #2d3136;
-      font-family: "Gulim","Dotum","Tahoma",sans-serif;
+      font-family: "Gulim", "Dotum", "Tahoma", sans-serif;
       font-size: 9pt;
       line-height: 1.15;
     }
-    button, input { font: inherit; }
+
+    button,
+    input {
+      font: inherit;
+    }
 
     /* ══════════════ 윈도우 프레임 ══════════════ */
 
@@ -45,9 +57,10 @@
       width: min(100%, 742px);
       background: #cedfeb;
       border: 1px solid #4f6475;
-      box-shadow: 0 0 0 1px #f8fdff, 0 0 0 2px #9ab0c2, 0 10px 28px rgba(47,64,80,.22);
+      box-shadow: 0 0 0 1px #f8fdff, 0 0 0 2px #9ab0c2, 0 10px 28px rgba(47, 64, 80, .22);
       padding: 2px;
     }
+
     .window-inner {
       border: 1px solid #d8ebf8;
       background: linear-gradient(180deg, #eef5fa, #dce7f0);
@@ -57,7 +70,10 @@
 
     /* ══════════════ 로비 ══════════════ */
 
-    .lobby { padding: 12px; }
+    .lobby {
+      padding: 12px;
+    }
+
     .lobby-title {
       text-align: center;
       font-size: 14pt;
@@ -66,6 +82,7 @@
       margin-bottom: 12px;
       letter-spacing: -0.3px;
     }
+
     .lobby-body {
       display: flex;
       flex-direction: column;
@@ -73,6 +90,7 @@
       max-width: 340px;
       margin: 0 auto;
     }
+
     .lobby-body input {
       height: 26px;
       border: 1px solid #7f96aa;
@@ -81,23 +99,37 @@
       padding: 0 6px;
       outline: none;
     }
+
     .lobby-join {
       display: grid;
       grid-template-columns: 1fr auto;
       gap: 4px;
     }
-    .lobby-join input { text-transform: uppercase; letter-spacing: 2px; text-align: center; }
-    .lobby-buttons { display: flex; flex-direction: column; gap: 4px; }
-    .lobby-btn, #btn-refresh {
+
+    .lobby-join input {
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      text-align: center;
+    }
+
+    .lobby-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .lobby-btn,
+    #btn-refresh {
       height: 28px;
       border: 1px solid #1a5487;
       background: linear-gradient(180deg, var(--blue-btn-top), var(--blue-btn-mid) 68%, var(--blue-btn-bottom));
-      box-shadow: inset 1px 1px 0 rgba(255,255,255,.6), inset -1px -1px 0 rgba(11,63,113,.45);
+      box-shadow: inset 1px 1px 0 rgba(255, 255, 255, .6), inset -1px -1px 0 rgba(11, 63, 113, .45);
       color: #fff;
-      text-shadow: 1px 1px 0 rgba(9,55,98,.6);
+      text-shadow: 1px 1px 0 rgba(9, 55, 98, .6);
       cursor: pointer;
       font-weight: bold;
     }
+
     #btn-refresh {
       background: linear-gradient(180deg, #f0f0f0, #c8d0d8);
       color: #555;
@@ -115,6 +147,7 @@
       overflow-y: auto;
       padding: 2px;
     }
+
     .room-item {
       display: flex;
       justify-content: space-between;
@@ -122,12 +155,17 @@
       cursor: pointer;
       border-bottom: 1px solid #e8eef3;
     }
-    .room-item:hover { background: #eef5fb; }
+
+    .room-item:hover {
+      background: #eef5fb;
+    }
+
     .room-code-tag {
       font-weight: bold;
       color: #2488d3;
       letter-spacing: 1px;
     }
+
     .room-empty {
       text-align: center;
       color: #999;
@@ -143,19 +181,27 @@
       gap: 2px;
       align-items: stretch;
     }
-    .panel { background: transparent; border: 0; box-shadow: none; min-width: 0; }
+
+    .panel {
+      background: transparent;
+      border: 0;
+      box-shadow: none;
+      min-width: 0;
+    }
 
     .board-panel {
       display: grid;
-      grid-template-rows: minmax(0,1fr) 30px;
+      grid-template-rows: minmax(0, 1fr) 30px;
       gap: 2px;
     }
+
     .board-shell {
       border: 2px solid #6f879b;
       background: #f8fbfd;
       box-shadow: inset 1px 1px 0 #fff;
       padding: 3px;
     }
+
     .board {
       position: relative;
       width: 100%;
@@ -163,10 +209,17 @@
       background: #fff;
       overflow: hidden;
     }
-    #canvas { display: block; }
+
+    #canvas {
+      display: block;
+    }
 
     /* 오른쪽 액션 버튼 그룹 */
-    .right-actions { display: flex; gap: 6px; margin-left: auto; }
+    .right-actions {
+      display: flex;
+      gap: 6px;
+      margin-left: auto;
+    }
 
     .status-frame {
       min-height: 30px;
@@ -175,6 +228,7 @@
       box-shadow: inset 1px 1px 0 #fff;
       padding: 1px 7px 0;
     }
+
     .status-bar {
       height: 24px;
       display: flex;
@@ -184,6 +238,7 @@
       color: #3a3d42;
       white-space: nowrap;
     }
+
     #room-code-label {
       font-weight: bold;
       color: #2488d3;
@@ -194,7 +249,7 @@
 
     .side-panel {
       display: grid;
-      grid-template-rows: 30px minmax(0,1fr) 14px 110px 30px;
+      grid-template-rows: 30px minmax(0, 1fr) 14px 110px 30px;
       gap: 2px;
     }
 
@@ -213,16 +268,29 @@
       gap: 2px;
       height: 100%;
     }
+
     .logo-box {
-      display: flex; align-items: center; justify-content: center; text-align: center;
-      color: #485969; font-size: 8px; font-weight: bold; line-height: 1.05;
-      border: 2px solid #6f879b; background: linear-gradient(180deg, #fafdfd, #dce7ef);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: #485969;
+      font-size: 8px;
+      font-weight: bold;
+      line-height: 1.05;
+      border: 2px solid #6f879b;
+      background: linear-gradient(180deg, #fafdfd, #dce7ef);
       box-shadow: inset 1px 1px 0 #fff;
     }
+
     .title-box {
-      display: flex; align-items: center; padding: 0 8px;
-      color: #384651; font-size: 9pt;
-      border: 2px solid #6f879b; background: linear-gradient(180deg, #eef3f8, #d9e3eb);
+      display: flex;
+      align-items: center;
+      padding: 0 8px;
+      color: #384651;
+      font-size: 9pt;
+      border: 2px solid #6f879b;
+      background: linear-gradient(180deg, #eef3f8, #d9e3eb);
       box-shadow: inset 1px 1px 0 #fff;
     }
 
@@ -234,6 +302,7 @@
       gap: 4px;
       min-height: 0;
     }
+
     .player-cards {
       flex: 1;
       display: flex;
@@ -241,6 +310,7 @@
       gap: 4px;
       min-height: 0;
     }
+
     .pcard {
       flex: 1;
       min-width: 0;
@@ -251,10 +321,23 @@
       flex-direction: column;
       gap: 3px;
     }
-    .pcard.p0 { border-color: #2488d3; }
-    .pcard.p1 { border-color: #e04848; }
-    .pcard.p2 { border-color: #28a428; }
-    .pcard.p3 { border-color: #e07818; }
+
+    .pcard.p0 {
+      border-color: #2488d3;
+    }
+
+    .pcard.p1 {
+      border-color: #e04848;
+    }
+
+    .pcard.p2 {
+      border-color: #28a428;
+    }
+
+    .pcard.p3 {
+      border-color: #e07818;
+    }
+
     .pcard-name {
       text-align: center;
       font-size: 9pt;
@@ -262,19 +345,38 @@
       padding: 2px 0;
       background: #eef3f8;
       border-bottom: 2px solid transparent;
-      overflow: hidden;
-      text-overflow: ellipsis;
       white-space: nowrap;
+      overflow: hidden;
     }
+
     .pcard-color {
-      width: 14px; height: 14px; border-radius: 50%;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
       margin: 2px auto;
       border: 1px solid;
     }
-    .pcard.p0 .pcard-color { background: #2488d3; border-color: #155f8a; }
-    .pcard.p1 .pcard-color { background: #e04848; border-color: #a03030; }
-    .pcard.p2 .pcard-color { background: #28a428; border-color: #1a6b1a; }
-    .pcard.p3 .pcard-color { background: #e07818; border-color: #9c4800; }
+
+    .pcard.p0 .pcard-color {
+      background: #2488d3;
+      border-color: #155f8a;
+    }
+
+    .pcard.p1 .pcard-color {
+      background: #e04848;
+      border-color: #a03030;
+    }
+
+    .pcard.p2 .pcard-color {
+      background: #28a428;
+      border-color: #1a6b1a;
+    }
+
+    .pcard.p3 .pcard-color {
+      background: #e07818;
+      border-color: #9c4800;
+    }
+
     /* 카드 하단 (말 그리드 + 배지) */
     .pcard-bottom {
       display: flex;
@@ -283,28 +385,55 @@
       margin-top: auto;
       padding-top: 2px;
     }
+
     .pcard-piece-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 3px;
     }
+
     .piece-dot {
       width: 18px;
       height: 18px;
       border-radius: 50%;
-      border: 1.5px solid rgba(0,0,0,0.25);
+      border: 1.5px solid rgba(0, 0, 0, 0.25);
       flex-shrink: 0;
     }
-    .piece-dot.gone { visibility: hidden; }
+
+    .piece-dot.gone {
+      visibility: hidden;
+    }
+
     .piece-dot.movable-dot {
       cursor: pointer;
-      box-shadow: 0 0 0 2px rgba(255,200,0,.85), 0 0 5px rgba(255,180,0,.5);
+      outline: 2px dashed #ddaa00;
+      outline-offset: 3px;
+      background-color: rgba(255, 220, 60, 0.25);
     }
-    .piece-dot.movable-dot:hover { filter: brightness(1.15); }
-    .pcard.p0 .piece-dot { background: radial-gradient(circle at 35% 35%, #7dc4ff, #2488d3); border-color: #155f8a; }
-    .pcard.p1 .piece-dot { background: radial-gradient(circle at 35% 35%, #ff9898, #e04848); border-color: #a03030; }
-    .pcard.p2 .piece-dot { background: radial-gradient(circle at 35% 35%, #7de07d, #28a428); border-color: #1a6b1a; }
-    .pcard.p3 .piece-dot { background: radial-gradient(circle at 35% 35%, #ffb870, #e07818); border-color: #9c4800; }
+
+    .piece-dot.movable-dot:hover {
+      filter: brightness(1.15);
+    }
+
+    .pcard.p0 .piece-dot {
+      background: radial-gradient(circle at 35% 35%, #7dc4ff, #2488d3);
+      border-color: #155f8a;
+    }
+
+    .pcard.p1 .piece-dot {
+      background: radial-gradient(circle at 35% 35%, #ff9898, #e04848);
+      border-color: #a03030;
+    }
+
+    .pcard.p2 .piece-dot {
+      background: radial-gradient(circle at 35% 35%, #7de07d, #28a428);
+      border-color: #1a6b1a;
+    }
+
+    .pcard.p3 .piece-dot {
+      background: radial-gradient(circle at 35% 35%, #ffb870, #e07818);
+      border-color: #9c4800;
+    }
 
     /* 보드 위 윷 표시 오버레이 */
     #yut-board-display {
@@ -344,27 +473,49 @@
       color: #28a428;
       min-height: 10px;
     }
+
     .pcard.is-ready {
-      box-shadow: 0 0 0 2px #28a428, 0 0 6px rgba(40,164,40,.25);
+      box-shadow: 0 0 0 2px #28a428, 0 0 6px rgba(40, 164, 40, .25);
     }
-    .pcard.is-host .pcard-ready-badge { color: #2488d3; }
+
+    .pcard.is-host .pcard-ready-badge {
+      color: #2488d3;
+    }
 
     /* READY 버튼 활성 상태 */
     #btn-ready.ready-active {
       border-color: #1a7a1a;
       background: linear-gradient(180deg, #5bc05b, #3a9d3a);
       color: #fff;
-      text-shadow: 1px 1px 0 rgba(0,80,0,.6);
+      text-shadow: 1px 1px 0 rgba(0, 80, 0, .6);
     }
-    .game-btn:disabled { opacity: 0.5; cursor: default; }
+
+    .game-btn:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
 
     /* 윷 결과 (텍스트 숨김 — 요소는 JS 호환성 유지용) */
-    .yut-result { display: none; }
-    .yut-pop { animation: yutpop .35s ease-out; }
-    @keyframes yutpop {
-      0%   { transform: scale(1.8); opacity: .5; }
-      100% { transform: scale(1);   opacity: 1; }
+    .yut-result {
+      display: none;
     }
+
+    .yut-pop {
+      animation: yutpop .35s ease-out;
+    }
+
+    @keyframes yutpop {
+      0% {
+        transform: scale(1.8);
+        opacity: .5;
+      }
+
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
     /* 던진 결과 큐 */
     .throw-queue {
       display: flex;
@@ -373,6 +524,7 @@
       flex-wrap: wrap;
       min-height: 0;
     }
+
     .throw-chip {
       display: inline-block;
       padding: 2px 8px;
@@ -397,22 +549,27 @@
       font-weight: bold;
       cursor: pointer;
     }
+
     .game-btn.primary {
       border-color: #1a5487;
       background: linear-gradient(180deg, var(--blue-btn-top), var(--blue-btn-mid) 68%, var(--blue-btn-bottom));
-      box-shadow: inset 1px 1px 0 rgba(255,255,255,.6), inset -1px -1px 0 rgba(11,63,113,.45);
+      box-shadow: inset 1px 1px 0 rgba(255, 255, 255, .6), inset -1px -1px 0 rgba(11, 63, 113, .45);
       color: #fff;
-      text-shadow: 1px 1px 0 rgba(9,55,98,.6);
+      text-shadow: 1px 1px 0 rgba(9, 55, 98, .6);
     }
-    .game-btn:active { transform: translateY(1px); }
+
+    .game-btn:active {
+      transform: translateY(1px);
+    }
 
     /* 채팅 */
     .chat-frame {
       display: grid;
-      grid-template-rows: minmax(0,1fr) 25px;
+      grid-template-rows: minmax(0, 1fr) 25px;
       gap: 2px;
       padding: 2px;
     }
+
     .chat-shell {
       border: 1px solid #9eb1c0;
       background: #fff;
@@ -421,6 +578,7 @@
       min-height: 0;
       overflow: hidden;
     }
+
     .chat-box {
       position: relative;
       height: 100%;
@@ -428,6 +586,7 @@
       border: 1px solid #767f88;
       overflow: hidden;
     }
+
     .chat-log {
       position: absolute;
       inset: 0;
@@ -438,8 +597,15 @@
       line-height: 1.35;
       font-size: 8.5pt;
     }
-    .chat-log p { margin: 0 0 1px; }
-    .chat-input-row { margin-top: 0; }
+
+    .chat-log p {
+      margin: 0 0 1px;
+    }
+
+    .chat-input-row {
+      margin-top: 0;
+    }
+
     .chat-input {
       width: 100%;
       height: 21px;
@@ -451,29 +617,45 @@
     }
 
     /* 하단 버튼 */
-    .actions-frame { min-height: 30px; padding: 3px 4px 2px; }
+    .actions-frame {
+      min-height: 30px;
+      padding: 3px 4px 2px;
+    }
+
     .actions {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 6px;
     }
-    .left-actions { display: flex; gap: 3px; }
+
+    .left-actions {
+      display: flex;
+      gap: 3px;
+    }
+
     .mini-btn {
-      min-width: 44px; height: 20px; padding: 0 7px;
+      min-width: 44px;
+      height: 20px;
+      padding: 0 7px;
       border: 1px solid #1a5487;
       background: linear-gradient(180deg, var(--blue-btn-top), var(--blue-btn-mid) 68%, var(--blue-btn-bottom));
-      box-shadow: inset 1px 1px 0 rgba(255,255,255,.6), inset -1px -1px 0 rgba(11,63,113,.45);
+      box-shadow: inset 1px 1px 0 rgba(255, 255, 255, .6), inset -1px -1px 0 rgba(11, 63, 113, .45);
       color: #fff;
-      text-shadow: 1px 1px 0 rgba(9,55,98,.6);
+      text-shadow: 1px 1px 0 rgba(9, 55, 98, .6);
       cursor: pointer;
     }
+
     .mini-btn.exit {
       border-color: #ac5600;
       background: linear-gradient(180deg, var(--orange-btn-top), var(--orange-btn-mid) 68%, var(--orange-btn-bottom));
-      box-shadow: inset 1px 1px 0 rgba(255,246,220,.7), inset -1px -1px 0 rgba(136,72,9,.45);
+      box-shadow: inset 1px 1px 0 rgba(255, 246, 220, .7), inset -1px -1px 0 rgba(136, 72, 9, .45);
     }
-    .mini-btn:active, .game-btn:active { transform: translateY(1px); }
+
+    .mini-btn:active,
+    .game-btn:active {
+      transform: translateY(1px);
+    }
 
     /* ══════════════ 타이머 ══════════════ */
 
@@ -484,6 +666,7 @@
       gap: 6px;
       padding: 0 2px;
     }
+
     .timer-track {
       flex: 1;
       height: 8px;
@@ -492,6 +675,7 @@
       border-radius: 2px;
       overflow: hidden;
     }
+
     .timer-fill {
       height: 100%;
       width: 100%;
@@ -499,7 +683,11 @@
       transition: width .25s linear;
       border-radius: 1px;
     }
-    .timer-fill.urgent { background: linear-gradient(180deg, #e85050, #c03030); }
+
+    .timer-fill.urgent {
+      background: linear-gradient(180deg, #e85050, #c03030);
+    }
+
     #timer-text {
       min-width: 28px;
       text-align: right;
@@ -507,7 +695,10 @@
       font-weight: bold;
       color: #555;
     }
-    #timer-text.urgent { color: #d03030; }
+
+    #timer-text.urgent {
+      color: #d03030;
+    }
 
     /* ══════════════ 윷짝 ══════════════ */
 
@@ -517,6 +708,7 @@
       justify-content: center;
       min-height: 20px;
     }
+
     .stick {
       width: 10px;
       height: 28px;
@@ -524,21 +716,32 @@
       border: 1px solid #8a7a50;
       animation: stickDrop .3s ease-out both;
     }
+
     .stick.flat {
       background: linear-gradient(180deg, #f8ecc8, #e4d09a);
-      box-shadow: inset 1px 1px 0 rgba(255,255,255,.6);
+      box-shadow: inset 1px 1px 0 rgba(255, 255, 255, .6);
     }
+
     .stick.round {
       background: linear-gradient(180deg, #a07830, #785818);
-      box-shadow: inset 1px 1px 0 rgba(180,150,100,.4);
+      box-shadow: inset 1px 1px 0 rgba(180, 150, 100, .4);
     }
+
     .stick.backdo {
       border-color: #c04040;
-      box-shadow: 0 0 4px rgba(200,60,60,.5);
+      box-shadow: 0 0 4px rgba(200, 60, 60, .5);
     }
+
     @keyframes stickDrop {
-      0%   { transform: translateY(-12px) rotate(8deg); opacity: 0; }
-      100% { transform: translateY(0) rotate(0); opacity: 1; }
+      0% {
+        transform: translateY(-12px) rotate(8deg);
+        opacity: 0;
+      }
+
+      100% {
+        transform: translateY(0) rotate(0);
+        opacity: 1;
+      }
     }
 
     /* ══════════════ 로비 HUD ══════════════ */
@@ -549,21 +752,25 @@
       align-items: center;
       margin-bottom: 6px;
     }
+
     #lobby-greeting {
-      font-family: "Gulim","Dotum","Tahoma",sans-serif;
+      font-family: "Gulim", "Dotum", "Tahoma", sans-serif;
       font-size: 9pt;
       color: #384651;
     }
+
     #lobby-elixir {
       display: flex;
       align-items: center;
       gap: 3px;
     }
+
     #lobby-elixir img {
       height: 16px;
       image-rendering: pixelated;
       vertical-align: middle;
     }
+
     #lobby-elixir-count {
       font-weight: bold;
       color: #7b2fbe;
@@ -573,8 +780,9 @@
     /* ══════════════ 턴 표시 ══════════════ */
 
     .pcard.active-turn {
-      box-shadow: 0 0 0 2px #ffcc00, 0 0 8px rgba(255,200,0,.35);
+      box-shadow: 0 0 0 2px #ffcc00, 0 0 8px rgba(255, 200, 0, .35);
     }
+
     .pcard.active-turn .pcard-name {
       background: #fff8d8;
     }
@@ -582,18 +790,144 @@
     /* ══════════════ 반응형 ══════════════ */
 
     @media (max-width: 780px) {
-      .layout { grid-template-columns: 1fr; }
-      .window { width: min(100%, 520px); }
-      .side-panel { grid-template-rows: auto auto auto auto auto; }
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .window {
+        width: min(100%, 520px);
+      }
+
+      .side-panel {
+        grid-template-rows: auto auto auto auto auto;
+      }
     }
+
     @media (max-width: 560px) {
-      body { padding: 8px; }
-      .window { width: 100%; }
-      .player-cards { grid-template-columns: 1fr; }
-      .actions, .left-actions { flex-wrap: wrap; }
+      body {
+        padding: 8px;
+      }
+
+      .window {
+        width: 100%;
+      }
+
+      .player-cards {
+        grid-template-columns: 1fr;
+      }
+
+      .actions,
+      .left-actions {
+        flex-wrap: wrap;
+      }
+    }
+
+    /* ══════════════ 모달 ══════════════ */
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    .modal-box {
+      background: #cedfeb;
+      border: 1px solid #4f6475;
+      padding: 8px;
+      min-width: 280px;
+      max-width: 400px;
+      font-family: "Gulim", "Dotum", "Tahoma", sans-serif;
+      font-size: 9pt;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, .3);
+    }
+
+    .modal-title {
+      font-weight: bold;
+      margin-bottom: 6px;
+      border-bottom: 1px solid #c6ced7;
+      padding-bottom: 4px;
+    }
+
+    .avatar-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 4px;
+      margin-bottom: 6px;
+    }
+
+    .avatar-item {
+      border: 2px solid #c6ced7;
+      padding: 2px;
+      cursor: pointer;
+      text-align: center;
+      background: #f0f6fa;
+    }
+
+    .avatar-item:hover {
+      border-color: #2488d3;
+    }
+
+    .avatar-item.owned {
+      border-color: #2488d3;
+    }
+
+    .avatar-item.equipped {
+      border-color: #e04848;
+      background: #ffe0e0;
+    }
+
+    .avatar-item.locked {
+      opacity: .4;
+      cursor: default;
+    }
+
+    .avatar-item img {
+      width: 48px;
+      height: 48px;
+      display: block;
+      margin: 0 auto;
+      image-rendering: pixelated;
+    }
+
+    .shop-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      max-height: 300px;
+      overflow-y: auto;
+      margin-bottom: 6px;
+    }
+
+    .shop-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px;
+      border: 1px solid #c6ced7;
+      background: #f0f6fa;
+    }
+
+    .shop-item img {
+      width: 32px;
+      height: 32px;
+      image-rendering: pixelated;
+    }
+
+    .shop-item-info {
+      flex: 1;
+    }
+
+    .shop-item-price {
+      font-weight: bold;
+      white-space: nowrap;
     }
   </style>
 </head>
+
 <body>
 
   <!-- ════════ 로그인/회원가입 화면 ════════ -->
@@ -606,7 +940,8 @@
           <input id="inp-login-nick" maxlength="12" placeholder="닉네임">
           <input id="inp-login-pw" type="password" placeholder="비밀번호">
           <button id="btn-login" class="lobby-btn" type="button">로그인</button>
-          <button id="btn-show-signup" class="lobby-btn" type="button" style="background:linear-gradient(180deg,#f0f0f0,#c8d0d8);color:#555;border-color:#8f9ca7;text-shadow:none;">회원가입</button>
+          <button id="btn-show-signup" class="lobby-btn" type="button"
+            style="background:linear-gradient(180deg,#f0f0f0,#c8d0d8);color:#555;border-color:#8f9ca7;text-shadow:none;">회원가입</button>
           <p id="login-error" style="color:#e04848;text-align:center;min-height:14px;margin:0;"></p>
         </div>
 
@@ -615,9 +950,10 @@
           <input id="inp-signup-nick" maxlength="12" placeholder="닉네임">
           <input id="inp-signup-pw" type="password" placeholder="비밀번호">
           <input id="inp-signup-pw2" type="password" placeholder="비밀번호 확인">
-          <input id="inp-signup-ingame" maxlength="12" placeholder="인게임 닉네임 (본인확인용)">
+          <input id="inp-signup-ingame" maxlength="12" placeholder="메랜 닉네임 (본인확인용)">
           <button id="btn-signup" class="lobby-btn" type="button">가입하기</button>
-          <button id="btn-show-login" class="lobby-btn" type="button" style="background:linear-gradient(180deg,#f0f0f0,#c8d0d8);color:#555;border-color:#8f9ca7;text-shadow:none;">돌아가기</button>
+          <button id="btn-show-login" class="lobby-btn" type="button"
+            style="background:linear-gradient(180deg,#f0f0f0,#c8d0d8);color:#555;border-color:#8f9ca7;text-shadow:none;">돌아가기</button>
           <p id="signup-error" style="color:#e04848;text-align:center;min-height:14px;margin:0;"></p>
         </div>
 
@@ -643,14 +979,40 @@
               <input id="inp-code" maxlength="4" placeholder="방 코드">
               <button id="btn-join" class="lobby-btn" type="button">참가</button>
             </div>
+            <button id="btn-inventory" class="lobby-btn" type="button">인벤토리</button>
+            <button id="btn-shop" class="lobby-btn" type="button">상점</button>
           </div>
           <div id="room-list"></div>
           <button id="btn-refresh" type="button">방 목록 새로고침</button>
-          <button id="btn-logout" type="button" style="height:22px;padding:0 8px;border:1px solid #ac5600;background:linear-gradient(180deg,#ffb84c,#ff8d1d 68%,#e26a00);color:#fff;text-shadow:1px 1px 0 rgba(136,72,9,.6);cursor:pointer;font-family:'Gulim','Dotum','Tahoma',sans-serif;font-size:9pt;align-self:flex-end;">로그아웃</button>
+          <button id="btn-logout" type="button"
+            style="height:22px;padding:0 8px;border:1px solid #ac5600;background:linear-gradient(180deg,#ffb84c,#ff8d1d 68%,#e26a00);color:#fff;text-shadow:1px 1px 0 rgba(136,72,9,.6);cursor:pointer;font-family:'Gulim','Dotum','Tahoma',sans-serif;font-size:9pt;align-self:flex-end;">로그아웃</button>
         </div>
       </div>
     </div>
   </main>
+
+  <!-- 인벤토리 모달 -->
+  <div id="modal-inventory" class="modal-overlay" style="display:none">
+    <div class="modal-box">
+      <div class="modal-title">인벤토리</div>
+      <div id="inventory-grid" class="avatar-grid"></div>
+      <div style="display:flex;gap:4px;margin-top:4px">
+        <button id="btn-unequip" class="lobby-btn" type="button" style="flex:1">기본값으로 초기화</button>
+        <button id="modal-inventory-close" class="lobby-btn" type="button"
+          style="flex:1;background:linear-gradient(180deg,#f0f0f0,#c8d0d8);color:#555;border-color:#8f9ca7;text-shadow:none;">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 상점 모달 -->
+  <div id="modal-shop" class="modal-overlay" style="display:none">
+    <div class="modal-box">
+      <div class="modal-title">상점 <span id="shop-elixir-display"></span></div>
+      <div id="shop-list" class="shop-list"></div>
+      <button id="modal-shop-close" class="lobby-btn" type="button"
+        style="width:100%;background:linear-gradient(180deg,#f0f0f0,#c8d0d8);color:#555;border-color:#8f9ca7;text-shadow:none;">닫기</button>
+    </div>
+  </div>
 
   <!-- ════════ 게임 화면 ════════ -->
   <main id="screen-game" class="window" style="display:none">
@@ -725,15 +1087,17 @@
             <div class="player-action-row">
               <button id="btn-throw" class="game-btn primary" type="button" style="display:none">윷 던지기 (Space)</button>
               <div class="right-actions">
-                <button id="btn-start" class="game-btn primary" type="button" style="display:none">START!!</button>
-                <button id="btn-ready" class="game-btn" type="button" style="display:none">READY</button>
+                <button id="btn-start" type="button" style="display:none;padding:0;border:none;background:none;cursor:pointer;width:96px;height:29px;"><img src="/assets/Game_START_disabled.png" alt="START" style="width:96px;height:29px;display:block;"></button>
+                <button id="btn-ready" type="button" style="display:none;padding:0;border:none;background:none;cursor:pointer;width:96px;height:29px;"><img src="/assets/Game_READY.png" alt="READY" style="width:96px;height:29px;display:block;"></button>
               </div>
             </div>
           </section>
 
           <!-- 타이머 -->
           <div class="timer-wrap">
-            <div class="timer-track"><div id="timer-bar" class="timer-fill" style="width:0%"></div></div>
+            <div class="timer-track">
+              <div id="timer-bar" class="timer-fill" style="width:0%"></div>
+            </div>
             <span id="timer-text"></span>
           </div>
 
@@ -769,4 +1133,5 @@
   <script src="/js/board.js"></script>
   <script src="/js/client.js"></script>
 </body>
+
 </html>

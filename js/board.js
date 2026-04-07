@@ -22,6 +22,14 @@ class BoardRenderer {
 
     this._anim = null;       // 현재 진행 중인 애니메이션 상태
     this._lastRender = null; // 최근 draw() 호출 인자 (애니메이션 틱에서 재사용)
+
+    this.playerAvatars = {};     // pidx → HTMLImageElement
+    this.dupAvatarPlayers = new Set(); // 동일 아바타 착용 플레이어 pidx Set
+  }
+
+  setPlayerAvatars(map, dupSet) {
+    this.playerAvatars = map || {};
+    this.dupAvatarPlayers = dupSet || new Set();
   }
 
   resize() {
@@ -80,7 +88,8 @@ class BoardRenderer {
       if (this._anim) {
         this._drawOnePiece(ctx,
           this._anim.curX, this._anim.curY, 11,
-          this._anim.col, false, false, this._anim.cnt);
+          this._anim.col, false, false, this._anim.cnt,
+          this._anim.avatarImg || null, this._anim.isDup || false);
       }
     }
   }
@@ -98,7 +107,7 @@ class BoardRenderer {
    * @param {object}  state      애니메이션 중 사용할 gameState
    * @param {Function} onComplete 완료 콜백
    */
-  startAnimation(animIds, fromCoord, nodePath, col, cnt, state, onComplete) {
+  startAnimation(animIds, fromCoord, nodePath, col, cnt, state, onComplete, avatarImg, isDup) {
     // 진행 중인 애니메이션이 있으면 즉시 완료 처리
     if (this._anim) {
       const cb = this._anim.onComplete;
@@ -132,6 +141,8 @@ class BoardRenderer {
       curY: coordPath[0].y,
       col, cnt,
       onComplete,
+      avatarImg: avatarImg || null,
+      isDup: isDup || false,
     };
     // 애니메이션 중 렌더 파라미터 설정 (말 클릭 등 비활성화)
     this._lastRender = { state, movable: [], selectedPiece: null, destinations: [] };
@@ -265,7 +276,9 @@ class BoardRenderer {
         const cnt = (leader.stackedWith ? leader.stackedWith.length : 0) + 1;
         const isSelected = g.arr.some(p => p.id === selectedPiece);
         const canMove = g.arr.some(p => movable.includes(p.id));
-        this._drawOnePiece(ctx, px, py, r, col, isSelected, canMove, cnt);
+        const avatarImg = this.playerAvatars[g.pidx] || null;
+        const isDup = this.dupAvatarPlayers.has(g.pidx);
+        this._drawOnePiece(ctx, px, py, r, col, isSelected, canMove, cnt, avatarImg, isDup);
       });
     }
   }
@@ -311,14 +324,16 @@ class BoardRenderer {
         this._waitPos[piece.id] = { x: px, y: py };
         const isSelected = piece.id === selectedPiece;
         const canMove = movable.includes(piece.id);
-        this._drawOnePiece(ctx, px, py, r, col, isSelected, canMove, 0);
+        const avatarImg = this.playerAvatars[pidx] || null;
+        const isDup = this.dupAvatarPlayers.has(pidx);
+        this._drawOnePiece(ctx, px, py, r, col, isSelected, canMove, 0, avatarImg, isDup);
       });
     });
   }
 
   /* ── 말 한 개 렌더 (공통) ── */
 
-  _drawOnePiece(ctx, px, py, r, col, isSelected, canMove, stackCount) {
+  _drawOnePiece(ctx, px, py, r, col, isSelected, canMove, stackCount, avatarImg, isDuplicate) {
     if (isSelected) {
       ctx.beginPath(); ctx.arc(px, py, r + 5, 0, Math.PI * 2);
       ctx.fillStyle = 'rgba(100, 220, 255, 0.35)'; ctx.fill();
@@ -330,17 +345,27 @@ class BoardRenderer {
       ctx.setLineDash([3, 3]); ctx.stroke(); ctx.setLineDash([]);
     }
 
-    const grad = ctx.createRadialGradient(px - 2, py - 2, 1, px, py, r);
-    grad.addColorStop(0, col.h); grad.addColorStop(1, col.f);
-    ctx.beginPath(); ctx.arc(px, py, r, 0, Math.PI * 2);
-    ctx.fillStyle = grad; ctx.fill();
-    ctx.strokeStyle = col.s; ctx.lineWidth = 1.5; ctx.stroke();
+    if (avatarImg && avatarImg.complete && avatarImg.naturalWidth > 0) {
+      // 아바타: 이미지 그대로 표시, 중복 착용 시 팀컬러 외곽선 광선 효과
+      if (isDuplicate) {
+        ctx.filter = `drop-shadow(0 0 1.3px ${col.f}) drop-shadow(0 0 1.3px ${col.f})`;
+      }
+      ctx.drawImage(avatarImg, px - r, py - r, r * 2, r * 2);
+      ctx.filter = 'none';
+    } else {
+      // 기본: 팀 컬러 그라디언트 원
+      const grad = ctx.createRadialGradient(px - 2, py - 2, 1, px, py, r);
+      grad.addColorStop(0, col.h); grad.addColorStop(1, col.f);
+      ctx.beginPath(); ctx.arc(px, py, r, 0, Math.PI * 2);
+      ctx.fillStyle = grad; ctx.fill();
+      ctx.strokeStyle = col.s; ctx.lineWidth = 1.5; ctx.stroke();
+    }
 
     if (stackCount > 1) {
-      ctx.fillStyle = '#fff';
-      ctx.font = 'bold 11px sans-serif';
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(String(stackCount), px, py + 1);
+      ctx.fillStyle = '#000';
+      ctx.font = 'bold 10pt "Gulim","Dotum","Tahoma",sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+      ctx.fillText(String(stackCount), px, py - r - 1);
     }
   }
 
