@@ -16,11 +16,11 @@ class RoomManager {
     return code;
   }
 
-  createRoom(hostId, hostNickname, equippedAvatar, characterAvatar) {
+  createRoom(hostId, hostNickname, equippedAvatar, characterAvatar, elixir, wins, losses) {
     const code = this.generateCode();
     const room = {
       code,
-      players: [{ id: hostId, nickname: hostNickname, equippedAvatar: equippedAvatar || null, characterAvatar: characterAvatar || null }],
+      players: [{ id: hostId, nickname: hostNickname, equippedAvatar: equippedAvatar || null, characterAvatar: characterAvatar || null, elixir: elixir || 0, wins: wins || 0, losses: losses || 0 }],
       maxPlayers: 4,
       status: 'waiting',
       gameState: null,
@@ -31,13 +31,13 @@ class RoomManager {
     return room;
   }
 
-  joinRoom(code, playerId, nickname, equippedAvatar, characterAvatar) {
+  joinRoom(code, playerId, nickname, equippedAvatar, characterAvatar, elixir, wins, losses) {
     const room = this.rooms.get(code);
     if (!room) return { error: '존재하지 않는 방입니다.' };
     if (room.status === 'playing') return { error: '이미 게임이 진행 중입니다.' };
     if (room.players.length >= room.maxPlayers) return { error: '방이 가득 찼습니다.' };
     if (room.players.some(p => p.id === playerId)) return { error: '이미 방에 참가 중입니다.' };
-    room.players.push({ id: playerId, nickname, equippedAvatar: equippedAvatar || null, characterAvatar: characterAvatar || null });
+    room.players.push({ id: playerId, nickname, equippedAvatar: equippedAvatar || null, characterAvatar: characterAvatar || null, elixir: elixir || 0, wins: wins || 0, losses: losses || 0 });
     return { room };
   }
 

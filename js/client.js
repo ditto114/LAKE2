@@ -16,6 +16,20 @@
     else { img.src = ''; img.style.display = 'none'; }
   }
 
+  function updateCardStat(idx, player) {
+    const card = $('p' + idx + '-card');
+    if (!card) return;
+    const content = card.querySelector('.pcard-stat-content');
+    if (!content) return;
+    if (!player) return;
+    const wins = player.wins || 0;
+    const losses = player.losses || 0;
+    content.querySelector('.pcard-stat-elixir-val').textContent = player.elixir ?? 0;
+    content.querySelector('.pcard-stat-total').textContent = (wins + losses) + ' 전';
+    content.querySelector('.pcard-stat-wins').textContent = wins + ' 승';
+    content.querySelector('.pcard-stat-losses').textContent = losses + ' 패';
+  }
+
   let socket, myId, myNickname;
   let room = null;
   let players = [];
@@ -130,7 +144,7 @@
     $('screen-lobby').style.display = name === 'lobby' ? '' : 'none';
     $('screen-game').style.display = name === 'game' ? '' : 'none';
     if (name === 'game') setTimeout(() => { board.resize(); redrawBoard(); }, 50);
-    if (name === 'lobby') { if (socket) { socket.emit('room-list'); startRoomListPoll(); } } else stopRoomListPoll();
+    if (name === 'lobby') { if (socket) { socket.emit('room-list'); startRoomListPoll(); } refreshInventory(); } else stopRoomListPoll();
   }
 
   /* ══════════════════════════════════════════
@@ -153,6 +167,12 @@
     if (lobbyAvatar) {
       if (currentUser.characterAvatar) { lobbyAvatar.src = currentUser.characterAvatar; lobbyAvatar.style.display = 'block'; }
       else { lobbyAvatar.src = ''; lobbyAvatar.style.display = 'none'; }
+    }
+    const statsEl = $('lobby-stats');
+    if (statsEl) {
+      const wins = currentUser.wins || 0;
+      const losses = currentUser.losses || 0;
+      statsEl.textContent = `${wins + losses}전 ${wins}승 ${losses}패`;
     }
     // 캐릭터 아바타가 없으면 최초 1회 자동 설정
     if (!currentUser.characterAvatar && authToken) randomizeAvatar();
@@ -195,13 +215,12 @@
     showScreen('lobby');
   }
 
-  async function logout() {
+  async function logout(manual = false) {
     if (authToken) {
       try {
-        await fetch('/api/auth/logout', {
-          method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + authToken },
-        });
+        const headers = { 'Authorization': 'Bearer ' + authToken };
+        if (manual) headers['X-Logout-Manual'] = 'true';
+        await fetch('/api/auth/logout', { method: 'POST', headers });
       } catch (e) { /* best-effort */ }
     }
     authToken = null;
@@ -255,7 +274,7 @@
     $('inp-signup-ingame').onkeydown = (e) => { if (e.key === 'Enter') $('btn-signup').click(); };
 
     // 로그아웃
-    $('btn-logout').onclick = logout;
+    $('btn-logout').onclick = () => logout(true);
   }
   function startRoomListPoll() { stopRoomListPoll(); roomListTimer = setInterval(() => socket.emit('room-list'), 5000); }
   function stopRoomListPoll() { if (roomListTimer) { clearInterval(roomListTimer); roomListTimer = null; } }
@@ -315,6 +334,7 @@
             $('p' + i + '-name').textContent = players[i].nickname;
             card.classList.remove('empty-slot');
             setCardAvatar(i, players[i].characterAvatar || null);
+            updateCardStat(i, players[i]);
           } else {
             $('p' + i + '-name').textContent = '';
             card.classList.add('empty-slot');
@@ -366,6 +386,7 @@
     socket.on('player-forfeited', (d) => {
       gameState = d.state;
       clearSelection();
+      $('yut-sticks').innerHTML = '';
       const p = players.find(p => p.id === d.playerId);
       addSystemChat((p ? p.nickname : '플레이어') + ' 님이 기권했습니다.');
       allMovable = gameState.phase === 'MOVING' && isMyTurn()
@@ -395,12 +416,15 @@
           $('p' + i + '-name').textContent = players[i].nickname;
           card.classList.remove('empty-slot');
           setCardAvatar(i, players[i].characterAvatar || null);
+          updateCardStat(i, players[i]);
         } else {
           $('p' + i + '-name').textContent = '';
           card.classList.add('empty-slot');
           setCardAvatar(i, null);
         }
       }
+      const drawBtn = $('btn-draw');
+      if (drawBtn) { drawBtn.textContent = '무승부'; drawBtn.disabled = false; }
       addSystemChat('게임 시작!');
       updateGame();
     });
@@ -410,9 +434,6 @@
       clearSelection();
       sfx.throw();
       showYutSticks(d.result, d.yutResult);
-      addSystemChat(currentNick() + ' → ' + d.yutResult.name
-        + (d.continueThrow ? ' (추가 던지기!)' : '')
-        + (d.auto ? ' [자동]' : ''));
       if (d.continueThrow) sfx.extra();
 
       // MOVING 전환 시 이동 가능 말 계산
@@ -430,6 +451,7 @@
         // 스킵: 애니메이션 없이 즉시 처리
         gameState = d.state;
         clearSelection();
+        if (gameState.phase === 'THROWING') $('yut-sticks').innerHTML = '';
         if (d.noMovable) {
           sfx.noMove();
           addSystemChat('이동 가능한 말이 없습니다! 턴이 넘어갑니다.');
@@ -472,6 +494,7 @@
 
         board.startAnimation(animIds, fromCoord, nodePath, col, cnt, gameState, () => {
           if (d.captured) sfx.capture();
+          if (gameState.phase === 'THROWING') $('yut-sticks').innerHTML = '';
           allMovable = gameState.phase === 'MOVING' && isMyTurn()
             ? YutGame.getAllMovablePieces(gameState) : [];
           updateGame();
@@ -481,6 +504,7 @@
         // pieceId 없는 경우 (예외)
         gameState = d.state;
         clearSelection();
+        if (gameState.phase === 'THROWING') $('yut-sticks').innerHTML = '';
         allMovable = gameState.phase === 'MOVING' && isMyTurn()
           ? YutGame.getAllMovablePieces(gameState) : [];
         updateGame();
@@ -501,15 +525,26 @@
     socket.on('game-over', (d) => {
       stopTimerDisplay(); gameState = null; allMovable = []; clearSelection();
       clearPieceGrids();
-      const reasonText = d.reason === 'forfeit' ? ' (기권)' : d.reason === 'disconnect' ? ' (연결 끊김)' : '';
+      const reasonText = d.reason === 'forfeit' ? ' (기권)' : d.reason === 'disconnect' ? ' (연결 끊김)' : d.reason === 'auto-forfeit' ? ' (자동 기권)' : '';
       const lines = d.rankings.map(r => `${r.rank}등: ${r.nickname}`).join('  ');
       addSystemChat('게임 종료!' + reasonText + '  ' + lines);
       $('timer-text').textContent = '--';
       $('yut-sticks').innerHTML = ''; $('throw-queue').innerHTML = '';
+      const btn = $('btn-draw');
+      if (btn) { btn.textContent = '무승부'; btn.disabled = false; }
       const myRank = d.rankings.find(r => r.id === myId);
       if (myRank && myRank.rank === 1) sfx.win(); else playTone(220, 0.4, 0.1);
       // 대기실 인터페이스로 복귀
-      if (d.room) room = d.room;
+      if (d.room) {
+        room = d.room;
+        // 본인 stats도 갱신된 room 데이터에서 바로 반영
+        const myPlayer = d.room.players.find(p => p.id === myId);
+        if (myPlayer && currentUser) {
+          currentUser.wins = myPlayer.wins;
+          currentUser.losses = myPlayer.losses;
+          updateUserInfo();
+        }
+      }
       readySet = new Set();
       updateWaiting();
     });
@@ -518,6 +553,7 @@
       gameState = d.state;
       clearSelection();
       allMovable = [];
+      $('yut-sticks').innerHTML = '';
       addSystemChat('⏰ 시간 초과! 턴이 넘어갑니다.');
       updateGame();
     });
@@ -526,6 +562,40 @@
     socket.on('chat-message', (d) => addChat(d.nickname, d.text));
     socket.on('room-list', (list) => renderRoomList(list));
     socket.on('error-message', (d) => addSystemChat('오류: ' + d.message));
+    socket.on('room-system-message', (d) => addSystemChat(d.text));
+    socket.on('draw-vote-update', (d) => {
+      const btn = $('btn-draw');
+      if (btn) btn.textContent = `무승부(${d.votes}/${d.total})`;
+    });
+    socket.on('elixir-updated', (d) => {
+      if (currentUser) { currentUser.elixir = d.elixir; updateUserInfo(); }
+    });
+
+    socket.on('player-stat-updated', (d) => {
+      if (!room || !room.players) return;
+      const idx = room.players.findIndex(p => p.id === d.playerId);
+      if (idx === -1) return;
+      if (d.elixir !== undefined) room.players[idx].elixir = d.elixir;
+      updateCardStat(idx, room.players[idx]);
+    });
+
+    socket.on('game-draw', (d) => {
+      stopTimerDisplay(); gameState = null; allMovable = []; clearSelection();
+      clearPieceGrids();
+      addSystemChat('무승부 처리되었습니다!');
+      $('timer-text').textContent = '--';
+      $('yut-sticks').innerHTML = ''; $('throw-queue').innerHTML = '';
+      const btn = $('btn-draw');
+      if (btn) { btn.textContent = '무승부'; btn.disabled = false; }
+      if (d.room) room = d.room;
+      readySet = new Set();
+      updateWaiting();
+      // 사용자 정보(승/패) 갱신
+      if (authToken) {
+        fetch('/api/auth/me', { headers: { Authorization: 'Bearer ' + authToken } })
+          .then(r => r.json()).then(data => { if (data.success) { currentUser = data.user; updateUserInfo(); } }).catch(() => {});
+      }
+    });
   }
 
   /* ══════════════════════════════════════════
@@ -566,10 +636,17 @@
     $('btn-ready').onclick = () => socket.emit('toggle-ready');
     $('btn-throw').onclick = () => { ensureAudio(); socket.emit('throw-yut'); };
     $('btn-forfeit').onclick = () => { if (confirm('정말 기권하시겠습니까?')) socket.emit('forfeit'); };
+    $('btn-draw').onclick = () => { $('btn-draw').disabled = true; socket.emit('request-draw'); };
     $('btn-leave').onclick = () => {
-      socket.emit('leave-room');
-      room = null; gameState = null; allMovable = []; clearSelection(); players = [];
-      stopTimerDisplay(); $('chat-log').innerHTML = ''; showScreen('lobby');
+      if (gameState && confirm('게임이 진행 중입니다.\n나가면 기권 처리됩니다. 정말 나가시겠습니까?')) {
+        socket.emit('leave-room');
+        room = null; gameState = null; allMovable = []; clearSelection(); players = [];
+        stopTimerDisplay(); $('chat-log').innerHTML = ''; showScreen('lobby');
+      } else if (!gameState) {
+        socket.emit('leave-room');
+        room = null; gameState = null; allMovable = []; clearSelection(); players = [];
+        stopTimerDisplay(); $('chat-log').innerHTML = ''; showScreen('lobby');
+      }
     };
     /* ── 캔버스 클릭 ── */
     $('canvas').onclick = (e) => {
@@ -615,11 +692,10 @@
     });
 
     $('btn-randomize-avatar').onclick = randomizeAvatar;
-    $('btn-inventory').onclick = openInventory;
     $('btn-shop').onclick = openShop;
     $('btn-admin-users').onclick = openAdminUsers;
-    $('modal-admin-users-close').onclick = () => { $('modal-admin-users').style.display = 'none'; };
-    $('modal-inventory-close').onclick = () => { $('modal-inventory').style.display = 'none'; };
+    $('modal-admin-users-close').onclick = () => { $('modal-admin-users').style.display = 'none'; adminSelectedUserId = null; };
+    $('btn-grant-elixir').onclick = grantElixir;
     $('modal-shop-close').onclick = () => { $('modal-shop').style.display = 'none'; };
     $('btn-unequip').onclick = () => equipAvatar(null);
 
@@ -761,6 +837,7 @@
         card.classList.remove('empty-slot');
         nameEl.textContent = room.players[i].nickname;
         setCardAvatar(i, room.players[i].characterAvatar || null);
+        updateCardStat(i, room.players[i]);
         if (i === 0) {
           card.classList.add('is-host');
           card.classList.remove('is-ready');
@@ -769,7 +846,9 @@
           card.classList.remove('is-host');
           const ready = readySet.has(room.players[i].id);
           card.classList.toggle('is-ready', ready);
-          if (badge) badge.textContent = ready ? 'READY' : '';
+          if (badge) badge.textContent = '';
+          const readyIcon = $('p' + i + '-ready-icon');
+          if (readyIcon) readyIcon.src = ready ? '/assets/ready_on.png' : '/assets/ready_off.png';
         }
       } else {
         // 빈 슬롯 — 항상 4개 카드 표시
@@ -891,6 +970,7 @@
     $('btn-start').style.display  = mode === 'start' ? '' : 'none';
     $('btn-ready').style.display  = mode === 'ready' ? '' : 'none';
     $('btn-forfeit').style.display = inGame ? '' : 'none';
+    $('btn-draw').style.display   = inGame ? '' : 'none';
   }
 
   /* ── 던진 결과 큐 (정보 표시용) ── */
@@ -1016,15 +1096,22 @@
     shopData.ownedItems = data.ownedItems;
     shopData.elixir = data.elixir;
     updateUserInfo();
+    if (data.obtained) {
+      const n = data.obtained.replace('avatar_', '');
+      alert('말 랜덤박스 개봉!\n획득: P' + n + ' 아바타');
+      refreshInventory();
+    }
     renderShopModal(shopData);
   }
 
-  async function openInventory() {
-    const res = await fetch('/api/shop', { headers: { Authorization: 'Bearer ' + authToken } });
-    shopData = await res.json();
-    currentUser.equippedAvatar = shopData.equippedAvatar;
-    renderInventoryModal(shopData);
-    $('modal-inventory').style.display = '';
+  async function refreshInventory() {
+    if (!authToken) return;
+    try {
+      const res = await fetch('/api/shop', { headers: { Authorization: 'Bearer ' + authToken } });
+      shopData = await res.json();
+      currentUser.equippedAvatar = shopData.equippedAvatar;
+      renderInventory(shopData);
+    } catch (e) { /* ignore */ }
   }
 
   async function equipAvatar(avatarId) {
@@ -1038,7 +1125,7 @@
     currentUser.equippedAvatar = data.equippedAvatar;
     if (socket) socket.emit('update-avatar', data.equippedAvatar);
     if (shopData) shopData.equippedAvatar = data.equippedAvatar;
-    renderInventoryModal(shopData);
+    renderInventory(shopData);
   }
 
   function renderShopModal(data) {
@@ -1047,17 +1134,16 @@
     const list = $('shop-list');
     list.innerHTML = '';
     data.items.forEach(item => {
-      const owned = data.ownedItems.includes(item.id);
       const div = document.createElement('div');
       div.className = 'shop-item';
-      const imgHtml = item.image ? `<img src="${item.image}" alt="${item.name}">` : `<div style="width:32px;height:32px;background:#dde;border:1px solid #aab;display:flex;align-items:center;justify-content:center;font-size:9pt">없음</div>`;
-      const btnLabel = item.type === 'consumable' ? '구매' : (owned ? '보유 중' : '구매');
-      const btnDisabled = (item.type === 'avatar' && owned) ? 'disabled' : '';
-      const priceHtml = item.price > 0 ? `${item.price}<img src="/assets/Elixir.png" alt="엘" style="width:16px;height:16px;image-rendering:pixelated;vertical-align:middle;margin-left:2px">` : '무료';
-      div.innerHTML = `${imgHtml}<div class="shop-item-info"><div>${item.name}</div><div style="color:#666;font-size:9pt">${item.desc}</div></div><div class="shop-item-price">${priceHtml}</div><button class="lobby-btn" style="height:22px;padding:0 6px" ${btnDisabled}>${btnLabel}</button>`;
-      if (!btnDisabled) {
-        div.querySelector('button').onclick = () => buyItem(item.id);
-      }
+      const imgHtml = item.image
+        ? `<img src="${item.image}" alt="${item.name}">`
+        : `<div style="width:32px;height:32px;background:#dde;border:1px solid #aab;display:flex;align-items:center;justify-content:center;font-size:18pt">?</div>`;
+      const priceHtml = item.price > 0
+        ? `${item.price}<img src="/assets/Elixir.png" alt="엘" style="width:16px;height:16px;vertical-align:middle;margin-left:2px">`
+        : '무료';
+      div.innerHTML = `${imgHtml}<div class="shop-item-info"><div>${item.name}</div><div style="color:#666;font-size:9pt">${item.desc}</div></div><div class="shop-item-price">${priceHtml}</div><button class="lobby-btn" style="height:22px;padding:0 6px">구매</button>`;
+      div.querySelector('button').onclick = () => buyItem(item.id);
       list.appendChild(div);
     });
   }
@@ -1072,7 +1158,11 @@
       .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
+  let adminSelectedUserId = null;
+
   async function openAdminUsers() {
+    adminSelectedUserId = null;
+    updateAdminSelection();
     $('admin-users-status').textContent = '로딩 중...';
     $('admin-users-tbody').innerHTML = '';
     $('modal-admin-users').style.display = '';
@@ -1086,7 +1176,15 @@
       const tbody = $('admin-users-tbody');
       data.users.forEach(u => {
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${escapeHtml(u.nickname)}</td><td>${escapeHtml(u.ingameNickname)}</td><td>${u.elixir}</td><td>${u.elixirSpent}</td>`;
+        tr.dataset.userId = u.id;
+        tr.dataset.nickname = u.nickname;
+        tr.innerHTML = `<td>${escapeHtml(u.nickname)}</td><td>${escapeHtml(u.ingameNickname)}</td><td>${u.elixir}</td><td>${u.elixirSpent}</td><td>${u.wins}</td><td>${u.losses}</td>`;
+        tr.onclick = () => {
+          [...tbody.querySelectorAll('tr')].forEach(r => r.classList.remove('selected'));
+          tr.classList.add('selected');
+          adminSelectedUserId = u.id;
+          updateAdminSelection();
+        };
         tbody.appendChild(tr);
       });
     } catch (e) {
@@ -1094,19 +1192,52 @@
     }
   }
 
-  function renderInventoryModal(data) {
+  function updateAdminSelection() {
+    const label = $('admin-selected-label');
+    const btn = $('btn-grant-elixir');
+    if (label) label.textContent = adminSelectedUserId
+      ? ('선택: ' + (document.querySelector('#admin-users-tbody tr.selected')?.dataset?.nickname || adminSelectedUserId))
+      : '선택된 유저 없음';
+    if (btn) btn.disabled = !adminSelectedUserId;
+  }
+
+  async function grantElixir() {
+    if (!adminSelectedUserId) return;
+    const input = $('admin-elixir-amount');
+    const amt = parseInt(input ? input.value : 0);
+    if (isNaN(amt) || amt === 0) { alert('올바른 수량을 입력해주세요.'); return; }
+    const res = await fetch('/api/admin/grant-elixir', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + authToken },
+      body: JSON.stringify({ targetUserId: adminSelectedUserId, amount: amt }),
+    });
+    const data = await res.json();
+    if (data.error) { alert('오류: ' + data.error); return; }
+    // 테이블 내 해당 유저 엘릭서 칸 즉시 갱신
+    const tr = document.querySelector('#admin-users-tbody tr.selected');
+    if (tr) { const tds = tr.querySelectorAll('td'); if (tds[2]) tds[2].textContent = data.newElixir; }
+    alert('엘릭서 지급 완료. 현재 보유량: ' + data.newElixir);
+  }
+
+  function renderInventory(data) {
     const grid = $('inventory-grid');
+    if (!grid) return;
     grid.innerHTML = '';
-    const avatarItems = data.items.filter(i => i.type === 'avatar');
-    avatarItems.forEach(item => {
-      const owned = data.ownedItems.includes(item.id);
-      const equipped = data.equippedAvatar === item.id;
+    if (!data.ownedItems || data.ownedItems.length === 0) {
+      grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#888;font-size:9pt;padding:8px">보유한 아이템이 없습니다.</div>';
+      return;
+    }
+    // 중복 합산
+    const countMap = {};
+    data.ownedItems.forEach(id => { countMap[id] = (countMap[id] || 0) + 1; });
+    Object.entries(countMap).forEach(([itemId, count]) => {
+      const n = itemId.replace('avatar_', '');
+      const image = `/assets/P${n}.png`;
+      const equipped = data.equippedAvatar === itemId;
       const div = document.createElement('div');
-      div.className = 'avatar-item' + (equipped ? ' equipped' : (owned ? ' owned' : ' locked'));
-      div.innerHTML = `<img src="${item.image}" alt="${item.name}"><div style="font-size:9pt;margin-top:2px">${equipped ? '장착 중' : (owned ? '보유' : '미보유')}</div>`;
-      if (owned) {
-        div.onclick = () => equipAvatar(equipped ? null : item.id);
-      }
+      div.className = 'avatar-item' + (equipped ? ' equipped' : ' owned');
+      div.innerHTML = `<img src="${image}" alt="P${n}">${count > 1 ? `<span class="avatar-item-count">${count}</span>` : ''}`;
+      div.onclick = () => equipAvatar(equipped ? null : itemId);
       grid.appendChild(div);
     });
   }

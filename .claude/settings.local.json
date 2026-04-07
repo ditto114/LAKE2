@@ -6,7 +6,13 @@
       "Bash(node:*)",
       "Bash(cp \"C:/Users/utor9/.claude/image-cache/f4147660-6dd9-467e-8e92-525292505ff1/3.png\" \"C:/Users/utor9/Desktop/LAKE2/assets/Card_avatar_bg.png\")",
       "Bash(cp \"C:/Users/utor9/.claude/image-cache/f4147660-6dd9-467e-8e92-525292505ff1/4.png\" \"C:/Users/utor9/Desktop/LAKE2/assets/Card_name_bg.png\")",
-      "WebFetch(domain:archive.maplestory.nexon.com)"
+      "WebFetch(domain:archive.maplestory.nexon.com)",
+      "Bash(cp \"C:/Users/utor9/.claude/image-cache/f4147660-6dd9-467e-8e92-525292505ff1/3.png\" \"C:/Users/utor9/Desktop/LAKE2/assets/ready_off.png\")",
+      "Bash(cp \"C:/Users/utor9/.claude/image-cache/f4147660-6dd9-467e-8e92-525292505ff1/4.png\" \"C:/Users/utor9/Desktop/LAKE2/assets/ready_on.png\")",
+      "Bash(cp \"C:/Users/utor9/.claude/image-cache/f4147660-6dd9-467e-8e92-525292505ff1/5.png\" \"C:/Users/utor9/Desktop/LAKE2/assets/ready_off.png\")",
+      "Bash(cp \"C:/Users/utor9/.claude/image-cache/f4147660-6dd9-467e-8e92-525292505ff1/6.png\" \"C:/Users/utor9/Desktop/LAKE2/assets/ready_on.png\")",
+      "Bash(cp \"C:/Users/utor9/.claude/image-cache/f4147660-6dd9-467e-8e92-525292505ff1/7.png\" \"C:/Users/utor9/Desktop/LAKE2/assets/ready_on.png\")",
+      "Bash(cp \"C:/Users/utor9/.claude/image-cache/f4147660-6dd9-467e-8e92-525292505ff1/8.png\" \"C:/Users/utor9/Desktop/LAKE2/assets/ready_off.png\")"
     ]
   }
 }
