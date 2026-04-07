@@ -5,7 +5,8 @@
       "Bash(python3:*)",
       "Bash(node:*)",
       "Bash(cp \"C:/Users/utor9/.claude/image-cache/f4147660-6dd9-467e-8e92-525292505ff1/3.png\" \"C:/Users/utor9/Desktop/LAKE2/assets/Card_avatar_bg.png\")",
-      "Bash(cp \"C:/Users/utor9/.claude/image-cache/f4147660-6dd9-467e-8e92-525292505ff1/4.png\" \"C:/Users/utor9/Desktop/LAKE2/assets/Card_name_bg.png\")"
+      "Bash(cp \"C:/Users/utor9/.claude/image-cache/f4147660-6dd9-467e-8e92-525292505ff1/4.png\" \"C:/Users/utor9/Desktop/LAKE2/assets/Card_name_bg.png\")",
+      "WebFetch(domain:archive.maplestory.nexon.com)"
     ]
   }
 }

@@ -87,6 +87,33 @@
       margin: 0 auto;
     }
 
+    .lobby-main {
+      flex-direction: row;
+      align-items: flex-start;
+      max-width: none;
+      margin: 0;
+      gap: 16px;
+    }
+
+    .lobby-left {
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .lobby-avatar-img {
+      display: block;
+    }
+
+    .lobby-right {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-width: 340px;
+    }
+
     .lobby-body input {
       height: 26px;
       border: 1px solid #7f96aa;
@@ -335,6 +362,16 @@
       height: 91px;
       background: url('/assets/Card_avatar_bg.png') no-repeat left top;
       background-size: auto;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .pcard-avatar-img {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      display: none;
     }
 
     .pcard-namebar {
@@ -955,20 +992,26 @@
             <span id="lobby-elixir-count">0</span>
           </span>
         </div>
-        <div class="lobby-body">
-          <div class="lobby-buttons">
-            <button id="btn-create" class="lobby-btn" type="button">방 만들기</button>
-            <div class="lobby-join">
-              <input id="inp-code" maxlength="4" placeholder="방 코드">
-              <button id="btn-join" class="lobby-btn" type="button">참가</button>
-            </div>
-            <button id="btn-inventory" class="lobby-btn" type="button">인벤토리</button>
-            <button id="btn-shop" class="lobby-btn" type="button">상점</button>
+        <div class="lobby-body lobby-main">
+          <div class="lobby-left">
+            <img id="lobby-avatar-img" class="lobby-avatar-img" alt="">
+            <button id="btn-randomize-avatar" class="lobby-btn" type="button" style="margin-top:6px">아바타 변경</button>
           </div>
-          <div id="room-list"></div>
-          <button id="btn-refresh" type="button">방 목록 새로고침</button>
-          <button id="btn-logout" type="button"
-            style="height:22px;padding:0 8px;border:1px solid #ac5600;background:linear-gradient(180deg,#ffb84c,#ff8d1d 68%,#e26a00);color:#fff;text-shadow:1px 1px 0 rgba(136,72,9,.6);cursor:pointer;font-family:'Dotum','Gulim','Tahoma',sans-serif;font-size:9pt;align-self:flex-end;">로그아웃</button>
+          <div class="lobby-right">
+            <div class="lobby-buttons">
+              <button id="btn-create" class="lobby-btn" type="button">방 만들기</button>
+              <div class="lobby-join">
+                <input id="inp-code" maxlength="4" placeholder="방 코드">
+                <button id="btn-join" class="lobby-btn" type="button">참가</button>
+              </div>
+              <button id="btn-inventory" class="lobby-btn" type="button">인벤토리</button>
+              <button id="btn-shop" class="lobby-btn" type="button">상점</button>
+            </div>
+            <div id="room-list"></div>
+            <button id="btn-refresh" type="button">방 목록 새로고침</button>
+            <button id="btn-logout" type="button"
+              style="height:22px;padding:0 8px;border:1px solid #ac5600;background:linear-gradient(180deg,#ffb84c,#ff8d1d 68%,#e26a00);color:#fff;text-shadow:1px 1px 0 rgba(136,72,9,.6);cursor:pointer;font-family:'Dotum','Gulim','Tahoma',sans-serif;font-size:9pt;align-self:flex-end;">로그아웃</button>
+          </div>
         </div>
       </div>
     </div>
@@ -1038,7 +1081,7 @@
             <div class="player-cards">
               <div id="p0-card" class="pcard p0 is-host">
                 <img class="pcard-host-icon" src="/assets/host_icon.png" alt="방장">
-                <div class="pcard-avatar-bg"></div>
+                <div class="pcard-avatar-bg"><img id="p0-avatar-img" class="pcard-avatar-img" alt=""></div>
                 <div class="pcard-namebar">
                   <div id="p0-name" class="pcard-name">대기 중</div>
                 </div>
@@ -1049,7 +1092,7 @@
               </div>
               <div id="p1-card" class="pcard p1">
                 <img class="pcard-host-icon" src="/assets/host_icon.png" alt="방장">
-                <div class="pcard-avatar-bg"></div>
+                <div class="pcard-avatar-bg"><img id="p1-avatar-img" class="pcard-avatar-img" alt=""></div>
                 <div class="pcard-namebar">
                   <div id="p1-name" class="pcard-name">대기 중...</div>
                 </div>
@@ -1060,7 +1103,7 @@
               </div>
               <div id="p2-card" class="pcard p2 empty-slot">
                 <img class="pcard-host-icon" src="/assets/host_icon.png" alt="방장">
-                <div class="pcard-avatar-bg"></div>
+                <div class="pcard-avatar-bg"><img id="p2-avatar-img" class="pcard-avatar-img" alt=""></div>
                 <div class="pcard-namebar">
                   <div id="p2-name" class="pcard-name"></div>
                 </div>
@@ -1071,7 +1114,7 @@
               </div>
               <div id="p3-card" class="pcard p3 empty-slot">
                 <img class="pcard-host-icon" src="/assets/host_icon.png" alt="방장">
-                <div class="pcard-avatar-bg"></div>
+                <div class="pcard-avatar-bg"><img id="p3-avatar-img" class="pcard-avatar-img" alt=""></div>
                 <div class="pcard-namebar">
                   <div id="p3-name" class="pcard-name"></div>
                 </div>

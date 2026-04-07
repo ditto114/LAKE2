@@ -9,6 +9,13 @@
 (function () {
   const $ = (id) => document.getElementById(id);
 
+  function setCardAvatar(idx, src) {
+    const img = $('p' + idx + '-avatar-img');
+    if (!img) return;
+    if (src) { img.src = src; img.style.display = 'block'; }
+    else { img.src = ''; img.style.display = 'none'; }
+  }
+
   let socket, myId, myNickname;
   let room = null;
   let players = [];
@@ -28,7 +35,7 @@
   let roomListTimer = null;
   let readySet = new Set();
 
-  // 아바타 이미지 캐시
+  // 말 아바타 이미지 캐시 (P1-P8, 보드 말 전용)
   const _avatarImgCache = {};
   function loadAvatarImg(avatarId) {
     if (!avatarId) return null;
@@ -142,6 +149,13 @@
     if (greet) greet.textContent = currentUser.nickname;
     const elixirCount = $('lobby-elixir-count');
     if (elixirCount) elixirCount.textContent = currentUser.elixir;
+    const lobbyAvatar = $('lobby-avatar-img');
+    if (lobbyAvatar) {
+      if (currentUser.characterAvatar) { lobbyAvatar.src = currentUser.characterAvatar; lobbyAvatar.style.display = 'block'; }
+      else { lobbyAvatar.src = ''; lobbyAvatar.style.display = 'none'; }
+    }
+    // 캐릭터 아바타가 없으면 최초 1회 자동 설정
+    if (!currentUser.characterAvatar && authToken) randomizeAvatar();
   }
 
   async function doLogin(nickname, password) {
@@ -297,9 +311,11 @@
           if (players[i]) {
             $('p' + i + '-name').textContent = players[i].nickname;
             card.classList.remove('empty-slot');
+            setCardAvatar(i, players[i].characterAvatar || null);
           } else {
             $('p' + i + '-name').textContent = '';
             card.classList.add('empty-slot');
+            setCardAvatar(i, null);
           }
         }
         showScreen('game');
@@ -375,9 +391,11 @@
         if (players[i]) {
           $('p' + i + '-name').textContent = players[i].nickname;
           card.classList.remove('empty-slot');
+          setCardAvatar(i, players[i].characterAvatar || null);
         } else {
           $('p' + i + '-name').textContent = '';
           card.classList.add('empty-slot');
+          setCardAvatar(i, null);
         }
       }
       addSystemChat('게임 시작!');
@@ -600,6 +618,7 @@
       });
     });
 
+    $('btn-randomize-avatar').onclick = randomizeAvatar;
     $('btn-inventory').onclick = openInventory;
     $('btn-shop').onclick = openShop;
     $('modal-inventory-close').onclick = () => { $('modal-inventory').style.display = 'none'; };
@@ -743,6 +762,7 @@
         card.style.display = '';
         card.classList.remove('empty-slot');
         nameEl.textContent = room.players[i].nickname;
+        setCardAvatar(i, room.players[i].characterAvatar || null);
         if (i === 0) {
           card.classList.add('is-host');
           card.classList.remove('is-ready');
@@ -758,6 +778,7 @@
         card.style.display = '';
         nameEl.textContent = '';
         piecesEl.textContent = '';
+        setCardAvatar(i, null);
         card.classList.remove('is-ready', 'is-host');
         card.classList.add('empty-slot');
         if (badge) badge.textContent = '';
@@ -938,6 +959,30 @@
 
   function isMyTurn() { return gameState && gameState.players[gameState.currentPlayer] === myId; }
   function currentNick() { return players[gameState?.currentPlayer]?.nickname || ''; }
+
+  /* ══════════════════════════════════════════
+     아바타 랜덤 변경
+     ══════════════════════════════════════════ */
+
+  async function randomizeAvatar() {
+    const btn = $('btn-randomize-avatar');
+    if (btn) { btn.disabled = true; btn.textContent = '불러오는 중...'; }
+    try {
+      const res = await fetch('/api/avatar/randomize', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + authToken },
+      });
+      const data = await res.json();
+      if (data.error) { alert(data.error); return; }
+      currentUser.characterAvatar = data.characterAvatarUrl;
+      if (socket) socket.emit('update-char-avatar', data.characterAvatarUrl);
+      updateUserInfo();
+    } catch (e) {
+      alert('아바타를 변경할 수 없습니다.');
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = '아바타 변경'; }
+    }
+  }
 
   /* ══════════════════════════════════════════
      상점 / 인벤토리

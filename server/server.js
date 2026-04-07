@@ -14,6 +14,7 @@ const RoomManager = require('./room-manager');
 const G = require('../shared/game-logic');
 const auth = require('./auth');
 const shop = require('./shop');
+const avatarModule = require('./avatar');
 
 const rateLimit = require('express-rate-limit');
 
@@ -113,6 +114,12 @@ app.post('/api/shop/buy', async (req, res) => {
 app.post('/api/inventory/equip', async (req, res) => {
   const user = await requireAuth(req, res); if (!user) return;
   const result = await shop.equipAvatar(user.id, req.body.avatarId ?? null);
+  res.json(result);
+});
+
+app.post('/api/avatar/randomize', async (req, res) => {
+  const user = await requireAuth(req, res); if (!user) return;
+  const result = await avatarModule.randomizeAvatar(user.id);
   res.json(result);
 });
 
@@ -254,7 +261,7 @@ function sanitizeState(state) {
 function roomInfo(room) {
   return {
     code: room.code,
-    players: room.players.map(p => ({ id: p.id, nickname: p.nickname })),
+    players: room.players.map(p => ({ id: p.id, nickname: p.nickname, equippedAvatar: p.equippedAvatar || null, characterAvatar: p.characterAvatar || null })),
     maxPlayers: room.maxPlayers,
     status: room.status,
   };
@@ -293,7 +300,7 @@ io.on('connection', (socket) => {
       socket.join(currentRoomCode);
       socket.emit('session-resumed', {
         room: roomInfo(room),
-        players: room.players.map(p => ({ id: p.id, nickname: p.nickname, equippedAvatar: p.equippedAvatar })),
+        players: room.players.map(p => ({ id: p.id, nickname: p.nickname, equippedAvatar: p.equippedAvatar || null, characterAvatar: p.characterAvatar || null })),
         state: room.gameState ? sanitizeState(room.gameState) : null,
         timerEnd: room.timerEnd ?? null,
         readyPlayers: [...room.readyPlayers],
@@ -306,7 +313,7 @@ io.on('connection', (socket) => {
 
   socket.on('create-room', (_, ack) => {
     if (currentRoomCode) return emitError(socket, ack, '이미 방에 참가 중입니다.');
-    const room = roomManager.createRoom(userId, nickname, socket.user.equippedAvatar);
+    const room = roomManager.createRoom(userId, nickname, socket.user.equippedAvatar, socket.user.characterAvatar);
     currentRoomCode = room.code;
     socket.join(room.code);
     const r = { room: roomInfo(room) };
@@ -316,14 +323,14 @@ io.on('connection', (socket) => {
 
   socket.on('join-room', (code, ack) => {
     if (currentRoomCode) return emitError(socket, ack, '이미 방에 참가 중입니다.');
-    const result = roomManager.joinRoom(String(code).toUpperCase(), userId, nickname, socket.user.equippedAvatar);
+    const result = roomManager.joinRoom(String(code).toUpperCase(), userId, nickname, socket.user.equippedAvatar, socket.user.characterAvatar);
     if (result.error) return emitError(socket, ack, result.error);
     const room = result.room;
     currentRoomCode = room.code;
     socket.join(room.code);
     const r = { room: roomInfo(room) };
     if (typeof ack === 'function') ack(r); else socket.emit('room-joined', r);
-    socket.to(room.code).emit('player-joined', { player: { id: userId, nickname } });
+    socket.to(room.code).emit('player-joined', { player: { id: userId, nickname, equippedAvatar: socket.user.equippedAvatar || null, characterAvatar: socket.user.characterAvatar || null } });
     io.to(room.code).emit('ready-update', { readyPlayers: [...room.readyPlayers] });
     console.log(`[방 참가] ${room.code} ← ${nickname}`);
   });
@@ -360,7 +367,7 @@ io.on('connection', (socket) => {
     room.gameState = G.createGameState(room.players.map(p => p.id));
     room.playerNicknameMap = new Map(room.players.map(p => [p.id, p.nickname]));
     io.to(room.code).emit('game-started', {
-      players: room.players.map(p => ({ id: p.id, nickname: p.nickname, equippedAvatar: p.equippedAvatar })),
+      players: room.players.map(p => ({ id: p.id, nickname: p.nickname, equippedAvatar: p.equippedAvatar || null, characterAvatar: p.characterAvatar || null })),
       state: sanitizeState(room.gameState),
     });
     startTimer(room);
@@ -451,13 +458,23 @@ io.on('connection', (socket) => {
     }
   });
 
-  // ── 아바타 갱신 ──
+  // ── 말 아바타 갱신 (P1-P8) ──
   socket.on('update-avatar', (avatarId) => {
     socket.user.equippedAvatar = avatarId || null;
     const room = currentRoomCode ? roomManager.getRoom(currentRoomCode) : null;
     if (room) {
       const p = room.players.find(p => p.id === userId);
       if (p) p.equippedAvatar = avatarId || null;
+    }
+  });
+
+  // ── 캐릭터 아바타 갱신 (MapleStory 초상화) ──
+  socket.on('update-char-avatar', (avatarUrl) => {
+    socket.user.characterAvatar = avatarUrl || null;
+    const room = currentRoomCode ? roomManager.getRoom(currentRoomCode) : null;
+    if (room) {
+      const p = room.players.find(p => p.id === userId);
+      if (p) p.characterAvatar = avatarUrl || null;
     }
   });
 
