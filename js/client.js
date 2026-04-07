@@ -14,6 +14,10 @@
   let players = [];
   let gameState = null;
 
+  // 인증 상태
+  let authToken = null;
+  let currentUser = null;
+
   // 이동 UI 상태
   let allMovable = [];        // 이동 가능한 모든 말 ID
   let selectedPiece = null;   // 선택된 말 ID
@@ -22,6 +26,7 @@
   let board;
   let timerEnd = null, timerInterval = null;
   let roomListTimer = null;
+  let readySet = new Set();
 
   /* 사운드 */
   let audioCtx = null;
@@ -51,22 +56,160 @@
 
   /* ══════════════════════════════════════════ */
 
-  window.addEventListener('DOMContentLoaded', () => {
-    socket = io();
+  window.addEventListener('DOMContentLoaded', async () => {
     board = new BoardRenderer($('canvas'));
-    setupSocket();
+    setupAuthUI();
     setupUI();
-    showScreen('lobby');
-    window.addEventListener('resize', () => {
-      if ($('screen-game').style.display !== 'none') { board.resize(); redrawBoard(); }
-    });
+
+    // 저장된 토큰이 있으면 자동 로그인 시도
+    const savedToken = localStorage.getItem('authToken');
+    if (savedToken) {
+      try {
+        const res = await fetch('/api/auth/me', {
+          headers: { 'Authorization': 'Bearer ' + savedToken },
+        });
+        const data = await res.json();
+        if (data.success) {
+          authToken = savedToken;
+          currentUser = data.user;
+          myNickname = currentUser.nickname;
+          updateUserInfo();
+          connectSocket();
+          showScreen('lobby');
+          return;
+        }
+      } catch (e) { /* 토큰 만료 또는 무효 */ }
+      localStorage.removeItem('authToken');
+    }
+
+    showScreen('auth');
+  });
+
+  window.addEventListener('resize', () => {
+    if ($('screen-game') && $('screen-game').style.display !== 'none') { board.resize(); redrawBoard(); }
   });
 
   function showScreen(name) {
+    $('screen-auth').style.display = name === 'auth' ? '' : 'none';
     $('screen-lobby').style.display = name === 'lobby' ? '' : 'none';
     $('screen-game').style.display = name === 'game' ? '' : 'none';
     if (name === 'game') setTimeout(() => { board.resize(); redrawBoard(); }, 50);
-    if (name === 'lobby') { socket.emit('room-list'); startRoomListPoll(); } else stopRoomListPoll();
+    if (name === 'lobby') { if (socket) { socket.emit('room-list'); startRoomListPoll(); } } else stopRoomListPoll();
+  }
+
+  /* ══════════════════════════════════════════
+     인증
+     ══════════════════════════════════════════ */
+
+  function connectSocket() {
+    if (socket) socket.disconnect();
+    socket = io({ auth: { token: authToken } });
+    setupSocket();
+  }
+
+  function updateUserInfo() {
+    if (!currentUser) return;
+    const greet = $('greeting-name');
+    if (greet) greet.textContent = currentUser.nickname;
+    const elixirCount = $('lobby-elixir-count');
+    if (elixirCount) elixirCount.textContent = currentUser.elixir;
+  }
+
+  async function doLogin(nickname, password) {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nickname, password }),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    authToken = data.token;
+    currentUser = data.user;
+    myNickname = currentUser.nickname;
+    localStorage.setItem('authToken', authToken);
+    updateUserInfo();
+    connectSocket();
+    showScreen('lobby');
+  }
+
+  async function doSignup(nickname, password, passwordConfirm, ingameNickname) {
+    const res = await fetch('/api/auth/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nickname, password, passwordConfirm, ingameNickname }),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    authToken = data.token;
+    currentUser = data.user;
+    myNickname = currentUser.nickname;
+    localStorage.setItem('authToken', authToken);
+    updateUserInfo();
+    connectSocket();
+    showScreen('lobby');
+  }
+
+  async function logout() {
+    if (authToken) {
+      try {
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + authToken },
+        });
+      } catch (e) { /* best-effort */ }
+    }
+    authToken = null;
+    currentUser = null;
+    localStorage.removeItem('authToken');
+    if (socket) socket.disconnect();
+    room = null; gameState = null; allMovable = []; clearSelection(); players = [];
+    stopTimerDisplay();
+    showScreen('auth');
+  }
+
+  function setupAuthUI() {
+    // 로그인/회원가입 전환
+    $('btn-show-signup').onclick = () => {
+      $('auth-login').style.display = 'none';
+      $('auth-signup').style.display = '';
+      $('login-error').textContent = '';
+    };
+    $('btn-show-login').onclick = () => {
+      $('auth-signup').style.display = 'none';
+      $('auth-login').style.display = '';
+      $('signup-error').textContent = '';
+    };
+
+    // 로그인
+    $('btn-login').onclick = async () => {
+      $('login-error').textContent = '';
+      try {
+        await doLogin($('inp-login-nick').value.trim(), $('inp-login-pw').value);
+      } catch (e) {
+        $('login-error').textContent = e.message;
+      }
+    };
+    $('inp-login-pw').onkeydown = (e) => { if (e.key === 'Enter') $('btn-login').click(); };
+    $('inp-login-nick').onkeydown = (e) => { if (e.key === 'Enter') $('btn-login').click(); };
+
+    // 회원가입
+    $('btn-signup').onclick = async () => {
+      $('signup-error').textContent = '';
+      try {
+        await doSignup(
+          $('inp-signup-nick').value.trim(),
+          $('inp-signup-pw').value,
+          $('inp-signup-pw2').value,
+          $('inp-signup-ingame').value.trim()
+        );
+      } catch (e) {
+        $('signup-error').textContent = e.message;
+      }
+    };
+    $('inp-signup-ingame').onkeydown = (e) => { if (e.key === 'Enter') $('btn-signup').click(); };
+
+    // 로그아웃
+    $('btn-logout').onclick = logout;
   }
   function startRoomListPoll() { stopRoomListPoll(); roomListTimer = setInterval(() => socket.emit('room-list'), 5000); }
   function stopRoomListPoll() { if (roomListTimer) { clearInterval(roomListTimer); roomListTimer = null; } }
@@ -80,26 +223,84 @@
     destinations = [];
   }
 
+  function clearPieceGrids() {
+    for (let i = 0; i < 4; i++) {
+      const g = $('p' + i + '-pieces');
+      if (g) g.innerHTML = '';
+    }
+  }
+
   /* ══════════════════════════════════════════
      Socket
      ══════════════════════════════════════════ */
 
   function setupSocket() {
     socket.on('connect', () => { myId = socket.id; });
+    socket.on('connect_error', (err) => {
+      if (err.message === 'Authentication required' || err.message === 'Invalid token') {
+        logout();
+      }
+    });
+    socket.on('session-replaced', (d) => {
+      alert(d.message || '다른 곳에서 로그인되어 연결이 종료됩니다.');
+      logout();
+    });
 
     socket.on('room-created', (d) => { room = d.room; showScreen('game'); updateWaiting(); addSystemChat('방이 생성되었습니다. 코드: ' + room.code); });
     socket.on('room-joined', (d) => { room = d.room; showScreen('game'); updateWaiting(); addSystemChat(room.code + ' 방에 참가했습니다.'); });
-    socket.on('player-joined', (d) => { room.guest = d.guest; updateWaiting(); addSystemChat(d.guest.nickname + ' 님이 입장했습니다.'); });
+    socket.on('player-joined', (d) => {
+      if (!room.players.find(p => p.id === d.player.id)) {
+        room.players.push(d.player);
+      }
+      updateWaiting();
+      addSystemChat(d.player.nickname + ' 님이 입장했습니다.');
+    });
+
+    socket.on('ready-update', (d) => {
+      readySet = new Set(d.readyPlayers);
+      if (room && room.status !== 'playing') updateWaiting();
+    });
     socket.on('player-left', (d) => {
-      room.guest = null; if (d.promoted) room.host = d.promoted;
+      room.players = room.players.filter(p => p.id !== d.playerId);
       gameState = null; allMovable = []; clearSelection(); stopTimerDisplay();
-      updateWaiting(); addSystemChat('상대방이 퇴장했습니다.');
+      // ready 배지 초기화는 뒤따라오는 ready-update 이벤트에서 처리됨
+      updateWaiting(); addSystemChat('플레이어가 퇴장했습니다.');
+    });
+
+    socket.on('player-forfeited', (d) => {
+      gameState = d.state;
+      clearSelection();
+      const p = players.find(p => p.id === d.playerId);
+      addSystemChat((p ? p.nickname : '플레이어') + ' 님이 기권했습니다.');
+      allMovable = gameState.phase === 'MOVING' && isMyTurn()
+        ? YutGame.getAllMovablePieces(gameState) : [];
+      updateGame();
     });
 
     socket.on('game-started', (d) => {
-      players = d.players; gameState = d.state;
+      players = d.players;
+      gameState = d.state;
       allMovable = []; clearSelection();
+      readySet = new Set();
+      // 말 그리드 초기화
+      for (let i = 0; i < 4; i++) { const g = $('p' + i + '-pieces'); if (g) g.innerHTML = ''; }
       $('chat-log').innerHTML = '';
+      // 항상 4개 카드 표시
+      for (let i = 0; i < 4; i++) {
+        const card = $('p' + i + '-card');
+        if (!card) continue;
+        card.style.display = '';
+        card.classList.remove('is-ready');
+        const badge = $('p' + i + '-ready-badge');
+        if (badge) badge.textContent = '';
+        if (players[i]) {
+          $('p' + i + '-name').textContent = players[i].nickname;
+          card.classList.remove('empty-slot');
+        } else {
+          $('p' + i + '-name').textContent = '';
+          card.classList.add('empty-slot');
+        }
+      }
       addSystemChat('게임 시작!');
       updateGame();
     });
@@ -121,34 +322,73 @@
         allMovable = [];
       }
       updateGame();
+      autoSelectIfAllWaiting();
     });
 
     socket.on('move-result', (d) => {
-      gameState = d.state;
-      clearSelection();
       if (d.skipped) {
+        // 스킵: 애니메이션 없이 즉시 처리
+        gameState = d.state;
+        clearSelection();
         if (d.noMovable) {
           sfx.noMove();
           addSystemChat('이동 가능한 말이 없습니다! 턴이 넘어갑니다.');
         } else {
-          addSystemChat('이동 불가 — 건너뜁니다.' + (d.auto ? ' [자동]' : ''));
+          addSystemChat('이동 불가 — 건너뜁니다.');
         }
-      } else {
-        sfx.move();
-        if (d.captured) { sfx.capture(); addSystemChat('잡기! 추가 던지기!'); }
-        if (d.auto) addSystemChat('[자동 이동]');
+        allMovable = gameState.phase === 'MOVING' && isMyTurn()
+          ? YutGame.getAllMovablePieces(gameState) : [];
+        updateGame();
+        autoSelectIfAllWaiting();
+        return;
       }
-      // 다음 상태에 따라 이동 가능 말 갱신
-      if (gameState.phase === 'MOVING' && isMyTurn()) {
-        allMovable = YutGame.getAllMovablePieces(gameState);
-      } else {
+
+      // 이동 애니메이션
+      const oldPiece = gameState && d.pieceId ? gameState.pieces[d.pieceId] : null;
+      if (oldPiece) {
+        const nodePath  = getMovePath(oldPiece, d.throwKey);
+        const playerIdx = gameState.players.indexOf(oldPiece.playerId);
+        const col       = board.playerColor(playerIdx);
+        const cnt       = (oldPiece.stackedWith ? oldPiece.stackedWith.length : 0) + 1;
+        const animIds   = [d.pieceId, ...(oldPiece.stackedWith || [])];
+
+        // 출발 캔버스 좌표
+        let fromCoord;
+        if (oldPiece.position === -1) {
+          fromCoord = board.positions[0];                      // 대기 말: 출발 노드에서 시작
+        } else {
+          fromCoord = board.positions[oldPiece.position] || board.positions[0];
+        }
+
+        // 상태 즉시 업데이트 (로직 기준), UI는 애니메이션 완료 후 갱신
+        gameState = d.state;
+        clearSelection();
         allMovable = [];
+        sfx.move();
+        if (d.auto) addSystemChat('⏰ 시간 초과 — 빽도 자동 이동!');
+        if (d.captured) addSystemChat(d.extraThrow ? '잡기! 추가 던지기!' : '잡기!');
+
+        board.startAnimation(animIds, fromCoord, nodePath, col, cnt, gameState, () => {
+          if (d.captured) sfx.capture();
+          allMovable = gameState.phase === 'MOVING' && isMyTurn()
+            ? YutGame.getAllMovablePieces(gameState) : [];
+          updateGame();
+          autoSelectIfAllWaiting();
+        });
+      } else {
+        // pieceId 없는 경우 (예외)
+        gameState = d.state;
+        clearSelection();
+        allMovable = gameState.phase === 'MOVING' && isMyTurn()
+          ? YutGame.getAllMovablePieces(gameState) : [];
+        updateGame();
+        autoSelectIfAllWaiting();
       }
-      updateGame();
     });
 
     socket.on('game-over', (d) => {
       stopTimerDisplay(); gameState = null; allMovable = []; clearSelection();
+      clearPieceGrids();
       const reason = d.reason === 'forfeit' ? ' (기권)' : d.reason === 'disconnect' ? ' (연결 끊김)' : '';
       addSystemChat('게임 종료! 승자: ' + d.winnerNickname + reason);
       $('status-text').textContent = '승자: ' + d.winnerNickname + reason;
@@ -205,25 +445,19 @@
 
   function setupUI() {
     $('btn-create').onclick = () => {
-      const nick = $('inp-nick').value.trim();
-      if (!nick) return alert('닉네임을 입력하세요.');
-      myNickname = nick; socket.emit('set-nickname', nick);
-      setTimeout(() => socket.emit('create-room'), 80);
+      socket.emit('create-room');
     };
     $('btn-join').onclick = () => {
-      const nick = $('inp-nick').value.trim();
       const code = $('inp-code').value.trim().toUpperCase();
-      if (!nick) return alert('닉네임을 입력하세요.');
       if (!code || code.length < 4) return alert('방 코드를 입력하세요.');
-      myNickname = nick; socket.emit('set-nickname', nick);
-      setTimeout(() => socket.emit('join-room', code), 80);
+      socket.emit('join-room', code);
     };
-    $('inp-nick').onkeydown = (e) => { if (e.key === 'Enter') $('btn-create').click(); };
     $('inp-code').addEventListener('input', (e) => { e.target.value = e.target.value.toUpperCase(); });
     $('inp-code').onkeydown = (e) => { if (e.key === 'Enter') $('btn-join').click(); };
     $('btn-refresh').onclick = () => socket.emit('room-list');
 
     $('btn-start').onclick = () => socket.emit('start-game');
+    $('btn-ready').onclick = () => socket.emit('toggle-ready');
     $('btn-throw').onclick = () => { ensureAudio(); socket.emit('throw-yut'); };
     $('btn-forfeit').onclick = () => { if (confirm('정말 기권하시겠습니까?')) socket.emit('forfeit'); };
     $('btn-leave').onclick = () => {
@@ -260,11 +494,21 @@
         return;
       }
 
-      // 3) 빈 곳 클릭 → 선택 해제
-      clearSelection();
-      redrawBoard();
-      updateStatusText();
     };
+
+    /* 플레이어 카드 말 dot 클릭 → 대기 말 선택 */
+    document.querySelectorAll('.pcard-piece-grid').forEach(grid => {
+      grid.addEventListener('click', (e) => {
+        if (!isMyTurn() || !gameState || gameState.phase !== 'MOVING') return;
+        const dot = e.target.closest('.piece-dot');
+        if (!dot || dot.classList.contains('gone')) return;
+        const pieceId = dot.dataset.pieceId;
+        if (pieceId && allMovable.includes(pieceId)) {
+          ensureAudio();
+          selectPiece(pieceId);
+        }
+      });
+    });
 
     /* Space 키 → 윷 던지기 */
     window.addEventListener('keydown', (e) => {
@@ -290,11 +534,76 @@
      말 선택 → 도착지 표시
      ══════════════════════════════════════════ */
 
+  /* ══════════════════════════════════════════
+     말 이동 경로 계산 (애니메이션용)
+     ══════════════════════════════════════════ */
+
+  function getMovePath(piece, throwKey) {
+    const steps = YutGame.YUT_RESULTS[throwKey].steps;
+    const path = [];
+
+    if (steps < 0) {
+      // 빽도: 한 칸 후퇴 목적지만 포함
+      if (piece.position === -1) return [];
+      const ri = piece.routeIndex, rt = piece.route;
+      if (rt === 'center' && ri === 0) {
+        path.push(YutGame.ROUTES.shortcut5[YutGame.ROUTES.shortcut5.indexOf(22) - 1]);
+      } else if (ri === 0) {
+        path.push(0);
+      } else if (ri === -1) {
+        path.push(19);
+      } else if (ri > 0) {
+        path.push(YutGame.ROUTES[rt][ri - 1]);
+      }
+      return path;
+    }
+
+    // 출발지(노드 0)에 있는 말: 전진 시 즉시 골인 → 경로 없음
+    if (piece.position === 0) return [];
+
+    // 전진: 한 칸씩 시뮬레이션
+    const isAtStart = false;
+    let curRoute = piece.position === -1 ? 'outer' : piece.route;
+    let curRI    = piece.position === -1 ? -1      : piece.routeIndex;
+
+    // 대기 말은 노드 0(출발)부터 시각적으로 시작
+    if (piece.position === -1) path.push(0);
+
+    for (let i = 0; i < steps; i++) {
+      curRI++;
+      const route = YutGame.ROUTES[curRoute];
+      if (curRI >= route.length) break;  // 완주
+      const nodeId = route[curRI];
+      path.push(nodeId);
+
+      // 경로 전환은 최종 착지 노드에서만 적용 (moveForward와 동일)
+      // 중간 경유 시 전환하면 잘못된 경로로 꺾임
+      if (i === steps - 1) {
+        if (curRoute === 'outer' && YutGame.SHORTCUT_CORNERS[nodeId]) {
+          curRoute = YutGame.SHORTCUT_CORNERS[nodeId];
+          curRI = YutGame.ROUTES[curRoute].indexOf(nodeId);
+        }
+        if (curRoute === 'shortcut5' && nodeId === 22) {
+          curRoute = 'center';
+          curRI = 0;
+        }
+      }
+    }
+    return path;
+  }
+
   function selectPiece(pieceId) {
     selectedPiece = pieceId;
     destinations = YutGame.getDestinations(gameState, pieceId);
     redrawBoard();
     updateStatusText();
+  }
+
+  /** 이동 가능한 말이 모두 대기 중(판 위에 없음)이면 첫 번째 말을 자동 선택 */
+  function autoSelectIfAllWaiting() {
+    if (!isMyTurn() || gameState.phase !== 'MOVING' || allMovable.length === 0) return;
+    const allWaiting = allMovable.every(id => gameState.pieces[id].position === -1);
+    if (allWaiting) selectPiece(allMovable[0]);
   }
 
   function doMove(pieceId, throwIndex) {
@@ -320,23 +629,74 @@
 
   function updateWaiting() {
     $('room-code-label').textContent = '방: ' + room.code;
-    $('host-name').textContent = room.host.nickname;
-    $('guest-name').textContent = room.guest ? room.guest.nickname : '대기 중...';
-    $('host-pieces').textContent = ''; $('guest-pieces').textContent = '';
-    $('yut-result').textContent = ''; $('yut-sticks').innerHTML = '';
+    const isHost = room.players[0]?.id === myId;
+    const nonHostPlayers = room.players.slice(1);
+    const allReady = nonHostPlayers.length > 0 && nonHostPlayers.every(p => readySet.has(p.id));
+    const myReady = readySet.has(myId);
+
+    // Player cards
+    for (let i = 0; i < 4; i++) {
+      const card    = $('p' + i + '-card');
+      const nameEl  = $('p' + i + '-name');
+      const piecesEl = $('p' + i + '-pieces');
+      const badge   = $('p' + i + '-ready-badge');
+      if (room.players[i]) {
+        card.style.display = '';
+        card.classList.remove('empty-slot');
+        nameEl.textContent = room.players[i].nickname;
+        if (i === 0) {
+          card.classList.add('is-host');
+          card.classList.remove('is-ready');
+          if (badge) badge.textContent = '방장';
+        } else {
+          card.classList.remove('is-host');
+          const ready = readySet.has(room.players[i].id);
+          card.classList.toggle('is-ready', ready);
+          if (badge) badge.textContent = ready ? 'READY' : '';
+        }
+      } else {
+        // 빈 슬롯 — 항상 4개 카드 표시
+        card.style.display = '';
+        nameEl.textContent = '';
+        piecesEl.textContent = '';
+        card.classList.remove('is-ready', 'is-host');
+        card.classList.add('empty-slot');
+        if (badge) badge.textContent = '';
+      }
+    }
+
+    clearPieceGrids();
+    $('yut-result').textContent = '';
+    $('yut-sticks').innerHTML = '';
     $('throw-queue').innerHTML = '';
-    $('timer-bar').style.width = '0%'; $('timer-text').textContent = '';
-    const isHost = room.host.id === myId;
-    $('status-text').textContent = room.guest
-      ? (isHost ? 'START를 눌러 시작하세요' : '방장이 시작하길 기다리는 중...')
-      : '상대를 기다리는 중...';
-    setActionArea(room.guest && isHost ? 'start' : 'wait');
+    $('timer-bar').style.width = '0%';
+    $('timer-text').textContent = '';
+
+    if (isHost) {
+      setActionArea('start');
+      const hasGuest = room.players.length >= 2;
+      $('btn-start').disabled = !hasGuest || !allReady;
+      if (!hasGuest) {
+        $('status-text').textContent = '상대를 기다리는 중...';
+      } else if (allReady) {
+        $('status-text').textContent = 'START를 눌러 시작하세요';
+      } else {
+        $('status-text').textContent = `준비 대기 중... (${nonHostPlayers.filter(p => readySet.has(p.id)).length}/${nonHostPlayers.length} 준비됨)`;
+      }
+    } else {
+      setActionArea('ready');
+      $('btn-ready').textContent = myReady ? 'UNREADY' : 'READY';
+      $('btn-ready').classList.toggle('ready-active', myReady);
+      $('status-text').textContent = myReady ? '준비 완료! 방장을 기다리는 중...' : '준비 버튼을 눌러주세요';
+    }
+
     board.draw(null, []);
   }
 
   function updateGame() {
     if (!gameState) return;
     const my = isMyTurn();
+
 
     if (gameState.phase === 'THROWING') {
       $('status-text').textContent = my ? '윷을 던져주세요!' : currentNick() + ' 님이 던지는 중...';
@@ -347,10 +707,11 @@
       setActionArea(my ? 'move' : 'wait');
     }
 
-    $('host-card').classList.toggle('active-turn', gameState.currentPlayer === 0);
-    $('guest-card').classList.toggle('active-turn', gameState.currentPlayer === 1);
-    updatePieceIndicators(0, 'host-pieces');
-    updatePieceIndicators(1, 'guest-pieces');
+    players.forEach((_, i) => {
+      const card = $('p' + i + '-card');
+      if (card) card.classList.toggle('active-turn', gameState.currentPlayer === i);
+      updatePieceIndicators(i, 'p' + i + '-pieces');
+    });
     renderThrowQueue();
     redrawBoard();
   }
@@ -358,17 +719,41 @@
   function updatePieceIndicators(pidx, elemId) {
     if (!gameState) return;
     const pid = gameState.players[pidx];
-    const pieces = Object.values(gameState.pieces).filter(p => p.playerId === pid);
-    $(elemId).textContent = '말: ' + pieces.map(p =>
-      p.finished ? '✓' : p.position >= 0 ? '◎' : '●'
-    ).join(' ');
+    const grid = $(elemId);
+    if (!grid) return;
+
+    const pieces = Object.values(gameState.pieces)
+      .filter(p => p.playerId === pid)
+      .sort((a, b) => a.id.localeCompare(b.id));
+
+    // 점 초기 생성
+    if (grid.children.length !== pieces.length) {
+      grid.innerHTML = '';
+      pieces.forEach(() => {
+        const dot = document.createElement('div');
+        dot.className = 'piece-dot';
+        grid.appendChild(dot);
+      });
+    }
+
+    const dots = grid.querySelectorAll('.piece-dot');
+    pieces.forEach((piece, i) => {
+      if (!dots[i]) return;
+      dots[i].dataset.pieceId = piece.id;
+      const waiting = piece.position === -1;
+      dots[i].classList.toggle('gone', !waiting);
+      dots[i].classList.toggle('movable-dot', waiting && allMovable.includes(piece.id));
+    });
   }
 
   function setActionArea(mode) {
-    $('btn-start').style.display = mode === 'start' ? '' : 'none';
-    $('btn-throw').style.display = mode === 'throw' ? '' : 'none';
-    $('btn-again').style.display = mode === 'gameover' ? '' : 'none';
-    $('btn-forfeit').style.display = (gameState && gameState.phase !== 'GAME_OVER') ? '' : 'none';
+    const inGame = !!(gameState && gameState.phase !== 'GAME_OVER');
+    $('btn-throw').style.display  = inGame ? '' : 'none';
+    $('btn-throw').disabled       = mode !== 'throw';
+    $('btn-start').style.display  = mode === 'start'    ? '' : 'none';
+    $('btn-ready').style.display  = mode === 'ready'    ? '' : 'none';
+    $('btn-again').style.display  = mode === 'gameover' ? '' : 'none';
+    $('btn-forfeit').style.display = inGame ? '' : 'none';
   }
 
   /* ── 던진 결과 큐 (정보 표시용) ── */
@@ -381,7 +766,7 @@
       const yr = YutGame.YUT_RESULTS[key];
       const span = document.createElement('span');
       span.className = 'throw-chip';
-      span.textContent = yr.name + '(' + (yr.steps > 0 ? '+' : '') + yr.steps + ')';
+      span.textContent = yr.name;
       el.appendChild(span);
     });
   }
@@ -392,13 +777,10 @@
 
   const STICK_PATTERNS = {
     BACKDO: [1,0,0,0], DO: [1,0,0,0], GAE: [1,1,0,0],
-    GEOL: [1,1,1,0], YUT: [0,0,0,0], MO: [1,1,1,1],
+    GEOL: [1,1,1,0], YUT: [1,1,1,1], MO: [0,0,0,0],
   };
 
   function showYutSticks(resultKey, yr) {
-    $('yut-result').textContent = yr.name;
-    $('yut-result').className = 'yut-result yut-pop';
-    setTimeout(() => $('yut-result').className = 'yut-result', 400);
     const pat = STICK_PATTERNS[resultKey] || [0,0,0,0];
     const sticks = $('yut-sticks');
     sticks.innerHTML = '';
@@ -429,7 +811,7 @@
     const el = $('room-list');
     if (!list.length) { el.innerHTML = '<p class="room-empty">대기 중인 방이 없습니다</p>'; return; }
     el.innerHTML = list.map(r =>
-      `<div class="room-item" data-code="${r.code}"><span>${r.hostNickname}</span><span class="room-code-tag">${r.code}</span><span>${r.playerCount}/2</span></div>`
+      `<div class="room-item" data-code="${r.code}"><span>${r.hostNickname}</span><span class="room-code-tag">${r.code}</span><span>${r.playerCount}/${r.maxPlayers}</span></div>`
     ).join('');
     el.querySelectorAll('.room-item').forEach(item => {
       item.onclick = () => { $('inp-code').value = item.dataset.code; };

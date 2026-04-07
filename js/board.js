@@ -10,8 +10,18 @@ class BoardRenderer {
     this.positions = {};
     this._waitPos = {};   // pieceId → {x,y} 대기 말 캔버스 좌표
 
-    this.P0 = { f: '#2488d3', s: '#155f8a', h: '#7dc4ff' };
-    this.P1 = { f: '#e04848', s: '#a03030', h: '#ff9898' };
+    this.COLORS = [
+      { f: '#2488d3', s: '#155f8a', h: '#7dc4ff' },  // P0 blue
+      { f: '#e04848', s: '#a03030', h: '#ff9898' },  // P1 red
+      { f: '#28a428', s: '#1a6b1a', h: '#7de07d' },  // P2 green
+      { f: '#e07818', s: '#9c4800', h: '#ffb870' },  // P3 orange
+    ];
+    // Keep P0 and P1 as aliases for backward compatibility
+    this.P0 = this.COLORS[0];
+    this.P1 = this.COLORS[1];
+
+    this._anim = null;       // 현재 진행 중인 애니메이션 상태
+    this._lastRender = null; // 최근 draw() 호출 인자 (애니메이션 틱에서 재사용)
   }
 
   resize() {
@@ -39,11 +49,19 @@ class BoardRenderer {
     }
   }
 
+  playerColor(idx) { return this.COLORS[idx % this.COLORS.length]; }
+
   /* ══════════════════════════════════════════
      메인 그리기
      ══════════════════════════════════════════ */
 
   draw(state, movable, selectedPiece, destinations) {
+    this._lastRender = {
+      state, movable: movable || [],
+      selectedPiece: selectedPiece || null,
+      destinations: destinations || [],
+    };
+
     const ctx = this.ctx, s = this.size;
     ctx.clearRect(0, 0, s, s);
     ctx.fillStyle = '#fafcfe';
@@ -53,11 +71,108 @@ class BoardRenderer {
     this._drawNodes();
 
     if (state) {
+      // 애니메이션 중인 말은 일반 그리기에서 제외
+      const excl = this._anim ? this._anim.ids : null;
       if (destinations && destinations.length > 0) this._drawDestinations(destinations);
-      this._drawPieces(state, movable || [], selectedPiece);
-      this._drawWaitingPieces(state, movable || [], selectedPiece);
+      this._drawPieces(state, movable || [], selectedPiece, excl);
+
+      // 애니메이션 말을 보간 위치에 그림
+      if (this._anim) {
+        this._drawOnePiece(ctx,
+          this._anim.curX, this._anim.curY, 11,
+          this._anim.col, false, false, this._anim.cnt);
+      }
     }
   }
+
+  /* ══════════════════════════════════════════
+     말 이동 애니메이션
+     ══════════════════════════════════════════ */
+
+  /**
+   * @param {string[]} animIds   애니메이션 말 ID 배열 (리더 + 업힌 말)
+   * @param {{x,y}}   fromCoord  출발 캔버스 좌표
+   * @param {number[]} nodePath  경유/도착 노드 ID 배열 (출발 제외)
+   * @param {object}  col        색상 객체 (P0 / P1)
+   * @param {number}  cnt        스택 개수
+   * @param {object}  state      애니메이션 중 사용할 gameState
+   * @param {Function} onComplete 완료 콜백
+   */
+  startAnimation(animIds, fromCoord, nodePath, col, cnt, state, onComplete) {
+    // 진행 중인 애니메이션이 있으면 즉시 완료 처리
+    if (this._anim) {
+      const cb = this._anim.onComplete;
+      this._anim = null;
+      if (cb) cb();
+    }
+
+    if (!nodePath || nodePath.length === 0 || !fromCoord) {
+      if (onComplete) onComplete();
+      return;
+    }
+
+    // 출발 좌표 + 경유 노드 캔버스 좌표 배열
+    const coordPath = [{ x: fromCoord.x, y: fromCoord.y }];
+    for (const nodeId of nodePath) {
+      const p = this.positions[nodeId];
+      if (p) coordPath.push({ x: p.x, y: p.y });
+    }
+
+    if (coordPath.length < 2) {
+      if (onComplete) onComplete();
+      return;
+    }
+
+    this._anim = {
+      ids: new Set(animIds.map(String)),
+      path: coordPath,
+      stepMs: 150,          // 노드 간 이동 시간 (ms)
+      startTime: null,
+      curX: coordPath[0].x,
+      curY: coordPath[0].y,
+      col, cnt,
+      onComplete,
+    };
+    // 애니메이션 중 렌더 파라미터 설정 (말 클릭 등 비활성화)
+    this._lastRender = { state, movable: [], selectedPiece: null, destinations: [] };
+
+    requestAnimationFrame(ts => this._animTick(ts));
+  }
+
+  _animTick(ts) {
+    if (!this._anim) return;
+    if (!this._anim.startTime) this._anim.startTime = ts;
+
+    const segs = this._anim.path.length - 1;
+    const totalMs = segs * this._anim.stepMs;
+    const t = Math.min(1, (ts - this._anim.startTime) / totalMs);
+
+    // 현재 세그먼트 계산
+    const rawSeg = t * segs;
+    const segIdx = Math.min(Math.floor(rawSeg), segs - 1);
+    const segT   = rawSeg - segIdx;
+    // ease-in-out (quadratic)
+    const ease   = segT < 0.5 ? 2 * segT * segT : -1 + (4 - 2 * segT) * segT;
+
+    const from = this._anim.path[segIdx];
+    const to   = this._anim.path[segIdx + 1];
+    this._anim.curX = from.x + (to.x - from.x) * ease;
+    this._anim.curY = from.y + (to.y - from.y) * ease;
+
+    // 마지막 노드에 도달했을 때 살짝 튀는 효과 (scale은 draw에서 하기 복잡하므로 생략)
+    const { state, movable, selectedPiece, destinations } = this._lastRender;
+    this.draw(state, movable, selectedPiece, destinations);
+
+    if (t < 1) {
+      requestAnimationFrame(ts => this._animTick(ts));
+    } else {
+      const cb = this._anim.onComplete;
+      this._anim = null;
+      if (cb) cb();
+    }
+  }
+
+  isAnimating() { return !!this._anim; }
 
   /* ── 선분 ── */
 
@@ -121,11 +236,12 @@ class BoardRenderer {
 
   /* ── 보드 위 말 ── */
 
-  _drawPieces(state, movable, selectedPiece) {
+  _drawPieces(state, movable, selectedPiece, excludeIds) {
     const ctx = this.ctx;
     const groups = {};
     for (const piece of Object.values(state.pieces)) {
       if (piece.position < 0) continue;
+      if (excludeIds && excludeIds.has(String(piece.id))) continue;
       if (!groups[piece.position]) groups[piece.position] = [];
       groups[piece.position].push(piece);
     }
@@ -133,21 +249,22 @@ class BoardRenderer {
     for (const [pos, pieces] of Object.entries(groups)) {
       const np = this.positions[pos];
       if (!np) continue;
-      const byP = [[], []];
+      const playerCount = state.players.length;
+      const byP = Array.from({ length: playerCount }, () => []);
       for (const p of pieces) {
         const idx = state.players.indexOf(p.playerId);
         if (idx >= 0) byP[idx].push(p);
       }
-      const draws = byP.filter(a => a.length > 0);
-      draws.forEach((arr, gi) => {
-        const pidx = state.players.indexOf(arr[0].playerId);
-        const col = pidx === 0 ? this.P0 : this.P1;
-        const off = draws.length > 1 ? (gi === 0 ? -10 : 10) : 0;
-        const px = np.x + off, py = np.y, r = 11;
-        const leader = arr.find(p => p.stackedWith && p.stackedWith.length > 0) || arr[0];
+      const draws = byP.map((arr, pidx) => ({ arr, pidx })).filter(g => g.arr.length > 0);
+      const OFFSETS = [[0,0],[-9,0],[9,0],[0,-9],[0,9],[-9,-9],[9,-9],[-9,9],[9,9]];
+      draws.forEach((g, gi) => {
+        const col = this.playerColor(g.pidx);
+        const [dx, dy] = draws.length > 1 ? (OFFSETS[gi] || [0, 0]) : [0, 0];
+        const px = np.x + dx, py = np.y + dy, r = 11;
+        const leader = g.arr.find(p => p.stackedWith && p.stackedWith.length > 0) || g.arr[0];
         const cnt = (leader.stackedWith ? leader.stackedWith.length : 0) + 1;
-        const isSelected = arr.some(p => p.id === selectedPiece);
-        const canMove = arr.some(p => movable.includes(p.id));
+        const isSelected = g.arr.some(p => p.id === selectedPiece);
+        const canMove = g.arr.some(p => movable.includes(p.id));
         this._drawOnePiece(ctx, px, py, r, col, isSelected, canMove, cnt);
       });
     }
@@ -155,24 +272,27 @@ class BoardRenderer {
 
   /* ── 대기 말 (판 바깥) ── */
 
-  _drawWaitingPieces(state, movable, selectedPiece) {
+  _drawWaitingPieces(state, movable, selectedPiece, excludeIds) {
     const ctx = this.ctx;
     this._waitPos = {};
 
-    const waiting = [[], []];
+    const playerCount = state.players.length;
+    const waiting = Array.from({ length: playerCount }, () => []);
     for (const piece of Object.values(state.pieces)) {
       if (piece.position !== -1 || piece.finished) continue;
+      if (excludeIds && excludeIds.has(String(piece.id))) continue;
       const pidx = state.players.indexOf(piece.playerId);
       if (pidx >= 0) waiting[pidx].push(piece);
     }
 
-    if (waiting[0].length === 0 && waiting[1].length === 0) return;
+    if (waiting.every(arr => arr.length === 0)) return;
 
     // 대기 영역: 보드 하단 여백
     const cx = this.size / 2;
     const y = this.size - this.pad * 0.3;
     const sp = 18;
     const r = 8;
+    const groupSp = 6;
 
     // "대기" 라벨
     ctx.fillStyle = '#99a';
@@ -181,14 +301,14 @@ class BoardRenderer {
     ctx.fillText('대기', cx, y - 12);
 
     waiting.forEach((pieces, pidx) => {
-      const col = pidx === 0 ? this.P0 : this.P1;
-      const groupStartX = cx + (pidx === 0 ? -pieces.length * sp : sp * 0.5);
-
+      if (pieces.length === 0) return;
+      const col = this.playerColor(pidx);
+      const totalW = playerCount * (sp * 4 + groupSp) - groupSp;
+      const startX = (this.size - totalW) / 2 + pidx * (sp * 4 + groupSp);
       pieces.forEach((piece, i) => {
-        const px = groupStartX + i * sp;
+        const px = startX + i * sp;
         const py = y;
         this._waitPos[piece.id] = { x: px, y: py };
-
         const isSelected = piece.id === selectedPiece;
         const canMove = movable.includes(piece.id);
         this._drawOnePiece(ctx, px, py, r, col, isSelected, canMove, 0);
@@ -238,11 +358,6 @@ class BoardRenderer {
         const np = this.positions[piece.position];
         if (!np) continue;
         if (dist2(cx, cy, np.x, np.y) <= 16 * 16) return pid;
-      } else if (piece.position === -1) {
-        // 대기 말
-        const wp = this._waitPos[pid];
-        if (!wp) continue;
-        if (dist2(cx, cy, wp.x, wp.y) <= 12 * 12) return pid;
       }
     }
     return null;

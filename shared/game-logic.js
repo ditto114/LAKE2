@@ -50,15 +50,15 @@ const ROUTES = {
 const SHORTCUT_CORNERS = { 5: 'shortcut5', 10: 'shortcut10' };
 
 const NODE_COORDS = {
-  0:  [0, 100],   1:  [0, 80],    2:  [0, 60],    3:  [0, 40],    4:  [0, 20],
-  5:  [0, 0],     6:  [20, 0],    7:  [40, 0],    8:  [60, 0],    9:  [80, 0],
-  10: [100, 0],   11: [100, 20],  12: [100, 40],  13: [100, 60],  14: [100, 80],
-  15: [100, 100], 16: [80, 100],  17: [60, 100],  18: [40, 100],  19: [20, 100],
-  20: [17, 17],   21: [33, 33],
+  0:  [100, 100], 1:  [100, 80],  2:  [100, 60],  3:  [100, 40],  4:  [100, 20],
+  5:  [100, 0],   6:  [80, 0],    7:  [60, 0],    8:  [40, 0],    9:  [20, 0],
+  10: [0, 0],     11: [0, 20],    12: [0, 40],    13: [0, 60],    14: [0, 80],
+  15: [0, 100],   16: [20, 100],  17: [40, 100],  18: [60, 100],  19: [80, 100],
+  20: [83, 17],   21: [67, 33],
   22: [50, 50],
-  23: [83, 17],   24: [67, 33],
-  25: [67, 67],   26: [83, 83],
-  27: [33, 67],   28: [17, 83],
+  23: [17, 17],   24: [33, 33],
+  25: [33, 67],   26: [17, 83],
+  27: [67, 67],   28: [83, 83],
 };
 
 const BOARD_EDGES = [
@@ -87,16 +87,17 @@ function createPiece(id, playerId) {
   };
 }
 
-function createGameState(player1Id, player2Id) {
+function createGameState(playerIds) {
   const pieces = {};
-  [player1Id, player2Id].forEach((pid, idx) => {
+  playerIds.forEach((pid, idx) => {
     for (let i = 0; i < PIECES_PER_PLAYER; i++) {
       const id = `p${idx}_${i}`;
       pieces[id] = createPiece(id, pid);
     }
   });
   return {
-    players: [player1Id, player2Id],
+    players: playerIds,
+    activePlayers: playerIds.map((_, i) => i),
     pieces,
     currentPlayer: 0,
     phase: 'THROWING',      // THROWING | MOVING | GAME_OVER
@@ -225,20 +226,29 @@ function movePiece(state, pieceId) {
   if (piece.playerId !== playerId) return { error: 'Not your piece' };
   if (piece.finished) return { error: 'Piece already finished' };
 
-  const steps = YUT_RESULTS[state.activeThrow].steps;
+  const throwKey = state.activeThrow;
+  const steps = YUT_RESULTS[throwKey].steps;
 
   // throwQueue에서 사용한 결과 제거
-  const idx = state.throwQueue.indexOf(state.activeThrow);
+  const idx = state.throwQueue.indexOf(throwKey);
   if (idx !== -1) state.throwQueue.splice(idx, 1);
   state.activeThrow = null;
 
   return steps < 0
-    ? moveBackward(state, piece)
-    : moveForward(state, piece, steps);
+    ? moveBackward(state, piece, throwKey)
+    : moveForward(state, piece, steps, throwKey);
 }
 
-function moveForward(state, piece, steps) {
+function moveForward(state, piece, steps, throwKey) {
   const route = ROUTES[piece.route];
+
+  // 출발지(노드 0)에 있는 말은 어떤 전진이든 즉시 골인
+  if (piece.position === 0) {
+    const stacked = piece.stackedWith.slice();
+    finishPiece(piece);
+    stacked.forEach(id => finishPiece(state.pieces[id]));
+    return endMove(state, false);
+  }
 
   if (piece.position === -1) {
     piece.routeIndex = steps - 1;
@@ -247,9 +257,9 @@ function moveForward(state, piece, steps) {
   }
 
   if (piece.routeIndex >= route.length) {
+    const stacked = piece.stackedWith.slice();
     finishPiece(piece);
-    piece.stackedWith.forEach(id => finishPiece(state.pieces[id]));
-    piece.stackedWith = [];
+    stacked.forEach(id => finishPiece(state.pieces[id]));
     return endMove(state, false);
   }
 
@@ -274,10 +284,10 @@ function moveForward(state, piece, steps) {
   const captured = checkCapture(state, piece);
   checkStack(state, piece);
 
-  return endMove(state, captured);
+  return endMove(state, captured, throwKey);
 }
 
-function moveBackward(state, piece) {
+function moveBackward(state, piece, throwKey) {
   if (piece.position === -1) return { error: 'Cannot move backward off-board piece' };
 
   piece.routeIndex -= 1;
@@ -291,12 +301,41 @@ function moveBackward(state, piece) {
       syncStacked(state, piece);
       const captured = checkCapture(state, piece);
       checkStack(state, piece);
-      return endMove(state, captured);
+      return endMove(state, captured, throwKey);
     }
-    resetPiece(piece);
-    piece.stackedWith.forEach(id => resetPiece(state.pieces[id]));
-    piece.stackedWith = [];
-    return endMove(state, false);
+    if (piece.routeIndex === -1) {
+      // 경로 첫 번째 칸(routeIndex 0)에서 빽도 → 출발지(노드 0)에 착지
+      piece.position = 0;
+      piece.route = 'outer';
+      // routeIndex는 -1 유지 (다음 전진 시 -1+steps 로 올바르게 계산됨)
+      piece.stackedWith.forEach(id => {
+        const sp = state.pieces[id];
+        sp.position = 0; sp.route = 'outer'; sp.routeIndex = -1;
+      });
+      piece.stackedWith = [];
+      syncStacked(state, piece);
+      const captured = checkCapture(state, piece);
+      checkStack(state, piece);
+      return endMove(state, captured, throwKey);
+    }
+    if (piece.routeIndex === -2) {
+      // 출발지(position=0, routeIndex=-1)에서 빽도 → 노드 19로 후퇴
+      // routeIndex를 route.length로 설정해 다음 전진 시 즉시 골인되도록 함
+      const outerLen = ROUTES.outer.length;
+      piece.position = 19;
+      piece.route = 'outer';
+      piece.routeIndex = outerLen; // 다음 전진 시 outerLen+steps >= outerLen → 골인
+      piece.stackedWith.forEach(id => {
+        const sp = state.pieces[id];
+        sp.position = 19; sp.route = 'outer'; sp.routeIndex = outerLen;
+      });
+      piece.stackedWith = [];
+      syncStacked(state, piece);
+      const captured = checkCapture(state, piece);
+      checkStack(state, piece);
+      return endMove(state, captured, throwKey);
+    }
+    return endMove(state, false, throwKey);
   }
 
   const route = ROUTES[piece.route];
@@ -306,7 +345,7 @@ function moveBackward(state, piece) {
   const captured = checkCapture(state, piece);
   checkStack(state, piece);
 
-  return endMove(state, captured);
+  return endMove(state, captured, throwKey);
 }
 
 /**
@@ -395,7 +434,7 @@ function checkStack(state, movingPiece) {
 }
 
 /** 이동 후 턴 처리 */
-function endMove(state, captured) {
+function endMove(state, captured, throwKey) {
   // 승리 판정
   const playerId = state.players[state.currentPlayer];
   const allFinished = Object.values(state.pieces)
@@ -408,11 +447,16 @@ function endMove(state, captured) {
     return { winner: playerId };
   }
 
-  // 잡기 → 추가 던지기 (던진 결과 소비 전에 추가 턴 부여)
+  // 잡기 → 추가 던지기 (단, 윷/모는 이미 추가 던지기가 부여되었으므로 제외)
   if (captured) {
-    state.phase = 'THROWING';
-    state.activeThrow = null;
-    return { captured: true, extraThrow: true, currentPlayer: state.currentPlayer };
+    const isYutOrMo = throwKey === 'YUT' || throwKey === 'MO';
+    if (!isYutOrMo) {
+      state.phase = 'THROWING';
+      state.activeThrow = null;
+      return { captured: true, extraThrow: true, currentPlayer: state.currentPlayer };
+    }
+    // 윷/모 잡기: 추가 던지기 없이 남은 큐 처리
+    return { captured: true, extraThrow: false, ...advanceTurn(state) };
   }
 
   return advanceTurn(state);
@@ -421,14 +465,13 @@ function endMove(state, captured) {
 /** throwQueue가 남았으면 MOVING 유지, 없으면 턴 교대 */
 function advanceTurn(state) {
   if (state.throwQueue.length > 0) {
-    // 아직 사용할 결과가 남아있음
     state.phase = 'MOVING';
     state.activeThrow = null;
     return { remainingThrows: state.throwQueue.length, currentPlayer: state.currentPlayer };
   }
-
-  // 모든 결과 소비 → 턴 교대
-  state.currentPlayer = (state.currentPlayer + 1) % 2;
+  const active = state.activePlayers;
+  const curIdx = active.indexOf(state.currentPlayer);
+  state.currentPlayer = active[(curIdx + 1) % active.length];
   state.phase = 'THROWING';
   state.activeThrow = null;
   state.turnCount++;
@@ -454,10 +497,17 @@ function previewMove(state, pieceId, throwKey) {
       if (piece.route === 'center') {
         return { position: ROUTES.shortcut5[ROUTES.shortcut5.indexOf(22) - 1] };
       }
-      return { position: -1 };
+      // 경로 첫 번째 칸(routeIndex=0)에서 빽도 → 출발지(노드 0)로 복귀
+      if (piece.routeIndex === 0) return { position: 0 };
+      // 출발지(position=0, routeIndex=-1)에서 빽도 → 노드 19로 후퇴 (다음 전진 시 골인)
+      if (piece.routeIndex === -1) return { position: 19 };
+      return null;
     }
     return { position: ROUTES[piece.route][piece.routeIndex - 1] };
   }
+
+  // 출발지(노드 0)에 있는 말은 전진 시 무조건 골인
+  if (piece.position === 0) return { position: -2, finished: true };
 
   const routeKey = piece.position === -1 ? 'outer' : piece.route;
   const route = ROUTES[routeKey];
@@ -516,10 +566,38 @@ function getAllMovablePieces(state) {
 // ═══════════════════════════════════════════════════════
 
 function forfeit(state, playerId) {
-  const winner = state.players.find(id => id !== playerId);
-  state.phase = 'GAME_OVER';
-  state.winner = winner;
-  return { winner, reason: 'forfeit' };
+  const playerIdx = state.players.indexOf(playerId);
+  if (playerIdx === -1) return { winner: null, gameOver: false };
+
+  // 기권 플레이어의 말 모두 초기화
+  for (const piece of Object.values(state.pieces)) {
+    if (piece.playerId === playerId) {
+      resetPiece(piece);
+      piece.stackedWith = [];
+    }
+  }
+
+  // activePlayers에서 제거
+  state.activePlayers = state.activePlayers.filter(i => i !== playerIdx);
+
+  if (state.activePlayers.length <= 1) {
+    const winnerId = state.activePlayers.length === 1
+      ? state.players[state.activePlayers[0]] : null;
+    state.phase = 'GAME_OVER';
+    state.winner = winnerId;
+    return { winner: winnerId, gameOver: true };
+  }
+
+  // 게임 계속 — 기권자 턴이었으면 다음 플레이어로 교대
+  if (state.currentPlayer === playerIdx) {
+    state.throwQueue = [];
+    state.activeThrow = null;
+    const active = state.activePlayers;
+    const nextIdx = active.findIndex(i => i > playerIdx);
+    state.currentPlayer = nextIdx >= 0 ? active[nextIdx] : active[0];
+    state.phase = 'THROWING';
+  }
+  return { winner: null, gameOver: false };
 }
 
 // ═══════════════════════════════════════════════════════
@@ -532,7 +610,7 @@ const GameLogic = {
   createGameState, throwYut, applyThrow,
   selectThrow, getMovablePieces, getMovablePiecesForThrow, hasAnyMovable,
   getAllMovablePieces, previewMove, getDestinations,
-  movePiece, skipThrow, skipAllThrows, forfeit,
+  movePiece, skipThrow, skipAllThrows, advanceTurn, forfeit,
 };
 
 if (typeof module !== 'undefined' && module.exports) {

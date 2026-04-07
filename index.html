@@ -165,30 +165,8 @@
     }
     #canvas { display: block; }
 
-    /* 보드 위 던지기 버튼 오버레이 */
-    #btn-throw {
-      position: absolute;
-      left: 50%;
-      top: 71%;
-      transform: translate(-50%, -50%);
-      z-index: 10;
-      height: auto;
-      min-width: 80px;
-      padding: 5px 14px;
-      line-height: 1.25;
-      font-size: 9.5pt;
-      text-align: center;
-      white-space: pre;
-      border: 1px solid #1a5487;
-      background: linear-gradient(180deg, var(--blue-btn-top), var(--blue-btn-mid) 68%, var(--blue-btn-bottom));
-      box-shadow: inset 1px 1px 0 rgba(255,255,255,.6), inset -1px -1px 0 rgba(11,63,113,.45),
-                  0 2px 6px rgba(0,0,0,.25);
-      color: #fff;
-      text-shadow: 1px 1px 0 rgba(9,55,98,.6);
-      font-weight: bold;
-      cursor: pointer;
-    }
-    #btn-throw:active { transform: translate(-50%, calc(-50% + 1px)); }
+    /* 오른쪽 액션 버튼 그룹 */
+    .right-actions { display: flex; gap: 6px; margin-left: auto; }
 
     .status-frame {
       min-height: 30px;
@@ -216,7 +194,7 @@
 
     .side-panel {
       display: grid;
-      grid-template-rows: 30px 110px 14px 90px minmax(0,1fr) 30px;
+      grid-template-rows: 30px minmax(0,1fr) 14px 110px 30px;
       gap: 2px;
     }
 
@@ -249,54 +227,139 @@
     }
 
     /* 플레이어 정보 */
-    .player-frame { padding: 4px; }
-    .player-cards {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
+    .player-frame {
+      padding: 4px;
+      display: flex;
+      flex-direction: column;
       gap: 4px;
-      height: 100%;
+      min-height: 0;
+    }
+    .player-cards {
+      flex: 1;
+      display: flex;
+      flex-direction: row;
+      gap: 4px;
+      min-height: 0;
     }
     .pcard {
+      flex: 1;
+      min-width: 0;
       border: 2px solid #b0bcc8;
       background: #fff;
-      padding: 6px;
+      padding: 4px;
       display: flex;
       flex-direction: column;
       gap: 3px;
     }
-    .pcard.host { border-color: #2488d3; }
-    .pcard.guest { border-color: #e04848; }
+    .pcard.p0 { border-color: #2488d3; }
+    .pcard.p1 { border-color: #e04848; }
+    .pcard.p2 { border-color: #28a428; }
+    .pcard.p3 { border-color: #e07818; }
     .pcard-name {
       text-align: center;
-      font-size: 12px;
-      font-weight: bold;
+      font-size: 9pt;
+      font-weight: normal;
       padding: 2px 0;
       background: #eef3f8;
       border-bottom: 2px solid transparent;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
     .pcard-color {
       width: 14px; height: 14px; border-radius: 50%;
       margin: 2px auto;
       border: 1px solid;
     }
-    .pcard.host .pcard-color { background: #2488d3; border-color: #155f8a; }
-    .pcard.guest .pcard-color { background: #e04848; border-color: #a03030; }
-    .pcard-pieces {
+    .pcard.p0 .pcard-color { background: #2488d3; border-color: #155f8a; }
+    .pcard.p1 .pcard-color { background: #e04848; border-color: #a03030; }
+    .pcard.p2 .pcard-color { background: #28a428; border-color: #1a6b1a; }
+    .pcard.p3 .pcard-color { background: #e07818; border-color: #9c4800; }
+    /* 카드 하단 (말 그리드 + 배지) */
+    .pcard-bottom {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      margin-top: auto;
+      padding-top: 2px;
+    }
+    .pcard-piece-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3px;
+    }
+    .piece-dot {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 1.5px solid rgba(0,0,0,0.25);
+      flex-shrink: 0;
+    }
+    .piece-dot.gone { visibility: hidden; }
+    .piece-dot.movable-dot {
+      cursor: pointer;
+      box-shadow: 0 0 0 2px rgba(255,200,0,.85), 0 0 5px rgba(255,180,0,.5);
+    }
+    .piece-dot.movable-dot:hover { filter: brightness(1.15); }
+    .pcard.p0 .piece-dot { background: radial-gradient(circle at 35% 35%, #7dc4ff, #2488d3); border-color: #155f8a; }
+    .pcard.p1 .piece-dot { background: radial-gradient(circle at 35% 35%, #ff9898, #e04848); border-color: #a03030; }
+    .pcard.p2 .piece-dot { background: radial-gradient(circle at 35% 35%, #7de07d, #28a428); border-color: #1a6b1a; }
+    .pcard.p3 .piece-dot { background: radial-gradient(circle at 35% 35%, #ffb870, #e07818); border-color: #9c4800; }
+
+    /* 보드 위 윷 표시 오버레이 */
+    #yut-board-display {
+      position: absolute;
+      left: 50%;
+      top: 71%;
+      transform: translate(-50%, -50%);
       text-align: center;
-      font-size: 11px;
-      color: #555;
-      letter-spacing: 1px;
+      z-index: 5;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
     }
 
-    /* 윷 / 액션 영역 */
-    .yut-frame { padding: 4px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
-    .yut-result {
-      font-size: 20pt;
-      font-weight: bold;
-      color: #384651;
-      min-height: 30px;
-      line-height: 30px;
+    /* 플레이어 카드 하단 액션 버튼 */
+    .player-action-row {
+      display: flex;
+      justify-content: flex-start;
+      padding: 4px 4px 0;
+      gap: 6px;
     }
+
+    /* 빈 슬롯 카드 */
+    .pcard.empty-slot {
+      opacity: 0.28;
+      background: #e8edf2;
+      pointer-events: none;
+    }
+
+    /* 준비 배지 */
+    .pcard-ready-badge {
+      text-align: center;
+      font-size: 9pt;
+      font-weight: normal;
+      color: #28a428;
+      min-height: 10px;
+    }
+    .pcard.is-ready {
+      box-shadow: 0 0 0 2px #28a428, 0 0 6px rgba(40,164,40,.25);
+    }
+    .pcard.is-host .pcard-ready-badge { color: #2488d3; }
+
+    /* READY 버튼 활성 상태 */
+    #btn-ready.ready-active {
+      border-color: #1a7a1a;
+      background: linear-gradient(180deg, #5bc05b, #3a9d3a);
+      color: #fff;
+      text-shadow: 1px 1px 0 rgba(0,80,0,.6);
+    }
+    .game-btn:disabled { opacity: 0.5; cursor: default; }
+
+    /* 윷 결과 (텍스트 숨김 — 요소는 JS 호환성 유지용) */
+    .yut-result { display: none; }
     .yut-pop { animation: yutpop .35s ease-out; }
     @keyframes yutpop {
       0%   { transform: scale(1.8); opacity: .5; }
@@ -319,6 +382,7 @@
       font-size: 9pt;
       font-weight: bold;
       color: #444;
+      animation: yutpop .35s ease-out;
     }
 
     .game-btn {
@@ -477,6 +541,35 @@
       100% { transform: translateY(0) rotate(0); opacity: 1; }
     }
 
+    /* ══════════════ 로비 HUD ══════════════ */
+
+    #lobby-hud {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    #lobby-greeting {
+      font-family: "Gulim","Dotum","Tahoma",sans-serif;
+      font-size: 9pt;
+      color: #384651;
+    }
+    #lobby-elixir {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+    #lobby-elixir img {
+      height: 16px;
+      image-rendering: pixelated;
+      vertical-align: middle;
+    }
+    #lobby-elixir-count {
+      font-weight: bold;
+      color: #7b2fbe;
+      font-size: 9pt;
+    }
+
     /* ══════════════ 턴 표시 ══════════════ */
 
     .pcard.active-turn {
@@ -503,13 +596,47 @@
 </head>
 <body>
 
-  <!-- ════════ 로비 화면 ════════ -->
-  <main id="screen-lobby" class="window">
+  <!-- ════════ 로그인/회원가입 화면 ════════ -->
+  <main id="screen-auth" class="window">
     <div class="window-inner">
       <div class="lobby">
-        <div class="lobby-title">메이플 윷놀이</div>
+
+        <!-- 로그인 폼 -->
+        <div id="auth-login" class="lobby-body">
+          <input id="inp-login-nick" maxlength="12" placeholder="닉네임">
+          <input id="inp-login-pw" type="password" placeholder="비밀번호">
+          <button id="btn-login" class="lobby-btn" type="button">로그인</button>
+          <button id="btn-show-signup" class="lobby-btn" type="button" style="background:linear-gradient(180deg,#f0f0f0,#c8d0d8);color:#555;border-color:#8f9ca7;text-shadow:none;">회원가입</button>
+          <p id="login-error" style="color:#e04848;text-align:center;min-height:14px;margin:0;"></p>
+        </div>
+
+        <!-- 회원가입 폼 -->
+        <div id="auth-signup" class="lobby-body" style="display:none">
+          <input id="inp-signup-nick" maxlength="12" placeholder="닉네임">
+          <input id="inp-signup-pw" type="password" placeholder="비밀번호">
+          <input id="inp-signup-pw2" type="password" placeholder="비밀번호 확인">
+          <input id="inp-signup-ingame" maxlength="12" placeholder="인게임 닉네임 (본인확인용)">
+          <button id="btn-signup" class="lobby-btn" type="button">가입하기</button>
+          <button id="btn-show-login" class="lobby-btn" type="button" style="background:linear-gradient(180deg,#f0f0f0,#c8d0d8);color:#555;border-color:#8f9ca7;text-shadow:none;">돌아가기</button>
+          <p id="signup-error" style="color:#e04848;text-align:center;min-height:14px;margin:0;"></p>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- ════════ 로비 화면 ════════ -->
+  <main id="screen-lobby" class="window" style="display:none">
+    <div class="window-inner">
+      <div class="lobby">
+        <div id="lobby-hud">
+          <span id="lobby-greeting"><span id="greeting-name"></span>님 안녕하세요~</span>
+          <span id="lobby-elixir">
+            <img src="/assets/Elixir.png" alt="Elixir">
+            <span id="lobby-elixir-count">0</span>
+          </span>
+        </div>
         <div class="lobby-body">
-          <input id="inp-nick" maxlength="12" placeholder="닉네임 입력">
           <div class="lobby-buttons">
             <button id="btn-create" class="lobby-btn" type="button">방 만들기</button>
             <div class="lobby-join">
@@ -519,6 +646,7 @@
           </div>
           <div id="room-list"></div>
           <button id="btn-refresh" type="button">방 목록 새로고침</button>
+          <button id="btn-logout" type="button" style="height:22px;padding:0 8px;border:1px solid #ac5600;background:linear-gradient(180deg,#ffb84c,#ff8d1d 68%,#e26a00);color:#fff;text-shadow:1px 1px 0 rgba(136,72,9,.6);cursor:pointer;font-family:'Gulim','Dotum','Tahoma',sans-serif;font-size:9pt;align-self:flex-end;">로그아웃</button>
         </div>
       </div>
     </div>
@@ -534,7 +662,11 @@
           <div class="board-shell">
             <div class="board">
               <canvas id="canvas"></canvas>
-              <button id="btn-throw" type="button" style="display:none">윷 던지기&#10;(Space)</button>
+              <div id="yut-board-display">
+                <div id="yut-result" class="yut-result"></div>
+                <div id="yut-sticks"></div>
+                <div id="throw-queue" class="throw-queue"></div>
+              </div>
             </div>
           </div>
           <div class="status-frame">
@@ -557,15 +689,45 @@
           <!-- 플레이어 정보 -->
           <section class="frame player-frame">
             <div class="player-cards">
-              <div id="host-card" class="pcard host">
-                <div id="host-name" class="pcard-name">대기 중</div>
+              <div id="p0-card" class="pcard p0 is-host">
+                <div id="p0-name" class="pcard-name">대기 중</div>
                 <div class="pcard-color"></div>
-                <div id="host-pieces" class="pcard-pieces"></div>
+                <div class="pcard-bottom">
+                  <div id="p0-pieces" class="pcard-piece-grid"></div>
+                  <div id="p0-ready-badge" class="pcard-ready-badge"></div>
+                </div>
               </div>
-              <div id="guest-card" class="pcard guest">
-                <div id="guest-name" class="pcard-name">대기 중...</div>
+              <div id="p1-card" class="pcard p1">
+                <div id="p1-name" class="pcard-name">대기 중...</div>
                 <div class="pcard-color"></div>
-                <div id="guest-pieces" class="pcard-pieces"></div>
+                <div class="pcard-bottom">
+                  <div id="p1-pieces" class="pcard-piece-grid"></div>
+                  <div id="p1-ready-badge" class="pcard-ready-badge"></div>
+                </div>
+              </div>
+              <div id="p2-card" class="pcard p2 empty-slot">
+                <div id="p2-name" class="pcard-name"></div>
+                <div class="pcard-color"></div>
+                <div class="pcard-bottom">
+                  <div id="p2-pieces" class="pcard-piece-grid"></div>
+                  <div id="p2-ready-badge" class="pcard-ready-badge"></div>
+                </div>
+              </div>
+              <div id="p3-card" class="pcard p3 empty-slot">
+                <div id="p3-name" class="pcard-name"></div>
+                <div class="pcard-color"></div>
+                <div class="pcard-bottom">
+                  <div id="p3-pieces" class="pcard-piece-grid"></div>
+                  <div id="p3-ready-badge" class="pcard-ready-badge"></div>
+                </div>
+              </div>
+            </div>
+            <div class="player-action-row">
+              <button id="btn-throw" class="game-btn primary" type="button" style="display:none">윷 던지기 (Space)</button>
+              <div class="right-actions">
+                <button id="btn-start" class="game-btn primary" type="button" style="display:none">START!!</button>
+                <button id="btn-ready" class="game-btn" type="button" style="display:none">READY</button>
+                <button id="btn-again" class="game-btn" type="button" style="display:none">다시하기</button>
               </div>
             </div>
           </section>
@@ -574,15 +736,6 @@
           <div class="timer-wrap">
             <div class="timer-track"><div id="timer-bar" class="timer-fill" style="width:0%"></div></div>
             <span id="timer-text"></span>
-          </div>
-
-          <!-- 윷 던지기 / 액션 -->
-          <div class="frame yut-frame">
-            <div id="yut-sticks"></div>
-            <div id="yut-result" class="yut-result"></div>
-            <div id="throw-queue" class="throw-queue"></div>
-            <button id="btn-start" class="game-btn primary" type="button" style="display:none">START!!</button>
-            <button id="btn-again" class="game-btn" type="button" style="display:none">다시하기</button>
           </div>
 
           <!-- 채팅 -->
