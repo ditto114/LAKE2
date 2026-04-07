@@ -15,6 +15,7 @@ const G = require('../shared/game-logic');
 const auth = require('./auth');
 const shop = require('./shop');
 const avatarModule = require('./avatar');
+const supabase = require('./supabase');
 
 const rateLimit = require('express-rate-limit');
 
@@ -99,6 +100,13 @@ async function requireAuth(req, res) {
   return user;
 }
 
+async function requireAdmin(req, res) {
+  const user = await requireAuth(req, res);
+  if (!user) return null;
+  if (!user.isAdmin) { res.status(403).json({ error: '관리자 권한이 필요합니다.' }); return null; }
+  return user;
+}
+
 app.get('/api/shop', async (req, res) => {
   const user = await requireAuth(req, res); if (!user) return;
   const ownedItems = await shop.getInventory(user.id);
@@ -121,6 +129,37 @@ app.post('/api/avatar/randomize', async (req, res) => {
   const user = await requireAuth(req, res); if (!user) return;
   const result = await avatarModule.randomizeAvatar(user.id);
   res.json(result);
+});
+
+// ═══════════════════════════════════════════════════════
+//  REST API — 관리자
+// ═══════════════════════════════════════════════════════
+
+const adminLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  message: { error: '요청이 너무 많습니다.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.get('/api/admin/users', adminLimiter, async (req, res) => {
+  const admin = await requireAdmin(req, res); if (!admin) return;
+  const { data, error } = await supabase
+    .from('users')
+    .select('id, nickname, ingame_nickname, elixir, elixir_spent')
+    .order('nickname', { ascending: true });
+  if (error) return res.json({ error: '유저 목록 조회 실패' });
+  res.json({
+    success: true,
+    users: data.map(u => ({
+      id: u.id,
+      nickname: u.nickname,
+      ingameNickname: u.ingame_nickname,
+      elixir: u.elixir,
+      elixirSpent: u.elixir_spent || 0,
+    })),
+  });
 });
 
 // ═══════════════════════════════════════════════════════

@@ -31,7 +31,7 @@ async function buyItem(userId, itemId) {
   // 현재 유저 정보 조회
   const { data: user, error: userErr } = await supabase
     .from('users')
-    .select('id, elixir')
+    .select('id, elixir, elixir_spent')
     .eq('id', userId)
     .single();
   if (userErr || !user) return { error: '유저 정보를 불러올 수 없습니다.' };
@@ -47,10 +47,11 @@ async function buyItem(userId, itemId) {
   // 엘릭서 차감 (consumable이면 +1 적용 → 순증가 = price === 0이면 +1)
   const elixirDelta = item.type === 'consumable' ? (1 - item.price) : -item.price;
   const newElixir = user.elixir + elixirDelta;
+  const newElixirSpent = (user.elixir_spent || 0) + (item.price > 0 ? item.price : 0);
 
   const { error: updateErr } = await supabase
     .from('users')
-    .update({ elixir: newElixir })
+    .update({ elixir: newElixir, elixir_spent: newElixirSpent })
     .eq('id', userId);
   if (updateErr) return { error: '구매 처리 중 오류가 발생했습니다.' };
 

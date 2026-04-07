@@ -156,6 +156,9 @@
     }
     // 캐릭터 아바타가 없으면 최초 1회 자동 설정
     if (!currentUser.characterAvatar && authToken) randomizeAvatar();
+    // 관리자 패널 표시 제어
+    const adminPanel = $('admin-panel');
+    if (adminPanel) adminPanel.style.display = currentUser.isAdmin ? 'block' : 'none';
   }
 
   async function doLogin(nickname, password) {
@@ -557,13 +560,6 @@
     $('btn-create').onclick = () => {
       socket.emit('create-room');
     };
-    $('btn-join').onclick = () => {
-      const code = $('inp-code').value.trim().toUpperCase();
-      if (!code || code.length < 4) return alert('방 코드를 입력하세요.');
-      socket.emit('join-room', code);
-    };
-    $('inp-code').addEventListener('input', (e) => { e.target.value = e.target.value.toUpperCase(); });
-    $('inp-code').onkeydown = (e) => { if (e.key === 'Enter') $('btn-join').click(); };
     $('btn-refresh').onclick = () => socket.emit('room-list');
 
     $('btn-start').onclick = () => socket.emit('start-game');
@@ -621,6 +617,8 @@
     $('btn-randomize-avatar').onclick = randomizeAvatar;
     $('btn-inventory').onclick = openInventory;
     $('btn-shop').onclick = openShop;
+    $('btn-admin-users').onclick = openAdminUsers;
+    $('modal-admin-users-close').onclick = () => { $('modal-admin-users').style.display = 'none'; };
     $('modal-inventory-close').onclick = () => { $('modal-inventory').style.display = 'none'; };
     $('modal-shop-close').onclick = () => { $('modal-shop').style.display = 'none'; };
     $('btn-unequip').onclick = () => equipAvatar(null);
@@ -948,12 +946,23 @@
   /* 방 목록 */
   function renderRoomList(list) {
     const el = $('room-list');
-    if (!list.length) { el.innerHTML = '<p class="room-empty">대기 중인 방이 없습니다</p>'; return; }
-    el.innerHTML = list.map(r =>
-      `<div class="room-item" data-code="${r.code}"><span>${r.hostNickname}</span><span class="room-code-tag">${r.code}</span><span>${r.playerCount}/${r.maxPlayers}</span></div>`
-    ).join('');
-    el.querySelectorAll('.room-item').forEach(item => {
-      item.onclick = () => { $('inp-code').value = item.dataset.code; };
+    el.innerHTML = '';
+    if (!list.length) {
+      const p = document.createElement('p');
+      p.className = 'room-empty';
+      p.textContent = '대기 중인 방이 없습니다';
+      el.appendChild(p);
+      return;
+    }
+    list.forEach(r => {
+      const slot = document.createElement('div');
+      slot.className = 'room-slot';
+      slot.innerHTML =
+        `<img src="/assets/room_slot.png" alt="방">` +
+        `<span class="room-slot-host">${escapeHtml(r.hostNickname)}</span>` +
+        `<span class="room-slot-count">${r.playerCount}/${r.maxPlayers}</span>`;
+      slot.onclick = () => socket.emit('join-room', r.code);
+      el.appendChild(slot);
     });
   }
 
@@ -1041,15 +1050,48 @@
       const owned = data.ownedItems.includes(item.id);
       const div = document.createElement('div');
       div.className = 'shop-item';
-      const imgHtml = item.image ? `<img src="${item.image}" alt="${item.name}">` : `<div style="width:32px;height:32px;background:#dde;border:1px solid #aab;display:flex;align-items:center;justify-content:center;font-size:7pt">없음</div>`;
+      const imgHtml = item.image ? `<img src="${item.image}" alt="${item.name}">` : `<div style="width:32px;height:32px;background:#dde;border:1px solid #aab;display:flex;align-items:center;justify-content:center;font-size:9pt">없음</div>`;
       const btnLabel = item.type === 'consumable' ? '구매' : (owned ? '보유 중' : '구매');
       const btnDisabled = (item.type === 'avatar' && owned) ? 'disabled' : '';
-      div.innerHTML = `${imgHtml}<div class="shop-item-info"><div>${item.name}</div><div style="color:#666;font-size:8pt">${item.desc}</div></div><div class="shop-item-price">${item.price > 0 ? item.price + '엘' : '무료'}</div><button class="lobby-btn" style="height:22px;padding:0 6px" ${btnDisabled}>${btnLabel}</button>`;
+      const priceHtml = item.price > 0 ? `${item.price}<img src="/assets/Elixir.png" alt="엘" style="width:16px;height:16px;image-rendering:pixelated;vertical-align:middle;margin-left:2px">` : '무료';
+      div.innerHTML = `${imgHtml}<div class="shop-item-info"><div>${item.name}</div><div style="color:#666;font-size:9pt">${item.desc}</div></div><div class="shop-item-price">${priceHtml}</div><button class="lobby-btn" style="height:22px;padding:0 6px" ${btnDisabled}>${btnLabel}</button>`;
       if (!btnDisabled) {
         div.querySelector('button').onclick = () => buyItem(item.id);
       }
       list.appendChild(div);
     });
+  }
+
+  /* ══════════════════════════════════════════
+     관리자 — 유저 관리
+     ══════════════════════════════════════════ */
+
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  async function openAdminUsers() {
+    $('admin-users-status').textContent = '로딩 중...';
+    $('admin-users-tbody').innerHTML = '';
+    $('modal-admin-users').style.display = '';
+    try {
+      const res = await fetch('/api/admin/users', {
+        headers: { Authorization: 'Bearer ' + authToken },
+      });
+      const data = await res.json();
+      if (data.error) { $('admin-users-status').textContent = '오류: ' + data.error; return; }
+      $('admin-users-status').textContent = '총 ' + data.users.length + '명';
+      const tbody = $('admin-users-tbody');
+      data.users.forEach(u => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${escapeHtml(u.nickname)}</td><td>${escapeHtml(u.ingameNickname)}</td><td>${u.elixir}</td><td>${u.elixirSpent}</td>`;
+        tbody.appendChild(tr);
+      });
+    } catch (e) {
+      $('admin-users-status').textContent = '네트워크 오류';
+    }
   }
 
   function renderInventoryModal(data) {
@@ -1061,7 +1103,7 @@
       const equipped = data.equippedAvatar === item.id;
       const div = document.createElement('div');
       div.className = 'avatar-item' + (equipped ? ' equipped' : (owned ? ' owned' : ' locked'));
-      div.innerHTML = `<img src="${item.image}" alt="${item.name}"><div style="font-size:7pt;margin-top:2px">${equipped ? '장착 중' : (owned ? '보유' : '미보유')}</div>`;
+      div.innerHTML = `<img src="${item.image}" alt="${item.name}"><div style="font-size:9pt;margin-top:2px">${equipped ? '장착 중' : (owned ? '보유' : '미보유')}</div>`;
       if (owned) {
         div.onclick = () => equipAvatar(equipped ? null : item.id);
       }

@@ -106,13 +106,6 @@
       display: block;
     }
 
-    .lobby-right {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      max-width: 340px;
-    }
 
     .lobby-body input {
       height: 26px;
@@ -123,22 +116,20 @@
       outline: none;
     }
 
-    .lobby-join {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 4px;
-    }
-
-    .lobby-join input {
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      text-align: center;
-    }
-
-    .lobby-buttons {
+    .lobby-center {
+      flex: 1;
       display: flex;
       flex-direction: column;
       gap: 4px;
+      align-items: flex-start;
+    }
+
+    .lobby-right {
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: flex-start;
     }
 
     .lobby-btn,
@@ -163,38 +154,123 @@
 
     /* 방 목록 */
     #room-list {
-      border: 1px solid #9eb1c0;
-      background: #fff;
-      min-height: 60px;
-      max-height: 140px;
+      display: grid;
+      grid-template-columns: repeat(3, 112px);
+      width: 336px;
+      max-height: 300px;
       overflow-y: auto;
+      border: 1px solid #9eb1c0;
+      background: #d8e8f4;
       padding: 2px;
+      gap: 2px;
+      box-sizing: content-box;
     }
 
-    .room-item {
-      display: flex;
-      justify-content: space-between;
-      padding: 4px 6px;
+    .room-slot {
+      position: relative;
+      width: 112px;
+      height: 58px;
       cursor: pointer;
-      border-bottom: 1px solid #e8eef3;
+      flex-shrink: 0;
     }
 
-    .room-item:hover {
-      background: #eef5fb;
+    .room-slot:hover { filter: brightness(1.06); }
+
+    .room-slot img {
+      display: block;
+      width: 112px;
+      height: 58px;
     }
 
-    .room-code-tag {
+    .room-slot-host {
+      position: absolute;
+      top: 4px;
+      left: 5px;
+      font-size: 9pt;
+      color: #1a3a5c;
+      max-width: 90px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      pointer-events: none;
+    }
+
+    .room-slot-count {
+      position: absolute;
+      bottom: 5px;
+      right: 6px;
+      font-size: 9pt;
+      color: #1a3a5c;
       font-weight: bold;
-      color: #2488d3;
-      letter-spacing: 1px;
+      pointer-events: none;
     }
 
     .room-empty {
+      grid-column: 1 / -1;
       text-align: center;
       color: #999;
       padding: 16px 0;
       margin: 0;
     }
+
+    /* ══════════════ 관리자 패널 ══════════════ */
+    #admin-panel {
+      border: 1px solid #b8960a;
+      background: linear-gradient(180deg, #fffbe8, #f5e8a8);
+      padding: 5px 7px;
+      display: none;
+    }
+
+    #admin-panel-title {
+      font-weight: bold;
+      color: #6b4a00;
+      font-size: 9pt;
+      margin-bottom: 4px;
+      border-bottom: 1px solid #d4b428;
+      padding-bottom: 3px;
+    }
+
+    /* ══════════════ 관리자 유저 관리 모달 ══════════════ */
+    #modal-admin-users .modal-box {
+      min-width: 480px;
+      max-width: 600px;
+    }
+
+    #admin-users-table-wrap {
+      max-height: 320px;
+      overflow-y: auto;
+      margin-bottom: 6px;
+      border: 1px solid #c6ced7;
+    }
+
+    #admin-users-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 9pt;
+    }
+
+    #admin-users-table th,
+    #admin-users-table td {
+      border: 1px solid #c6ced7;
+      padding: 3px 8px;
+      white-space: nowrap;
+    }
+
+    #admin-users-table th {
+      background: linear-gradient(180deg, #dce8f0, #c8d8e4);
+      font-weight: bold;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    #admin-users-table td:nth-child(3),
+    #admin-users-table td:nth-child(4) {
+      text-align: right;
+    }
+
+    #admin-users-table tr:nth-child(even) td { background: #f4f8fb; }
+    #admin-users-table tr:hover td { background: #deeaf5; }
 
     /* ══════════════ 게임 레이아웃 ══════════════ */
 
@@ -778,6 +854,26 @@
       margin-bottom: 6px;
     }
 
+    #lobby-hud-right {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .hud-btn {
+      height: 22px;
+      padding: 0 7px;
+      border: 1px solid #1a5487;
+      background: linear-gradient(180deg, var(--blue-btn-top), var(--blue-btn-mid) 68%, var(--blue-btn-bottom));
+      box-shadow: inset 1px 1px 0 rgba(255,255,255,.6), inset -1px -1px 0 rgba(11,63,113,.45);
+      color: #fff;
+      text-shadow: 1px 1px 0 rgba(9,55,98,.6);
+      cursor: pointer;
+      font-weight: bold;
+      font-family: "Dotum","Gulim","Tahoma",sans-serif;
+      font-size: 9pt;
+    }
+
     #lobby-greeting {
       font-family: "Dotum", "Gulim", "Tahoma", sans-serif;
       font-size: 9pt;
@@ -785,21 +881,41 @@
     }
 
     #lobby-elixir {
+      display: inline-flex;
+      align-items: center;
+      background: rgba(53, 53, 74, 0.5);
+      border-radius: 12px;
+      border: 1px solid rgba(82, 82, 110, 0.5);
+      overflow: visible;
+      height: 26px;
+      margin-left: -16px;
+    }
+
+    #lobby-elixir-icon {
       display: flex;
       align-items: center;
-      gap: 3px;
+      justify-content: center;
+      padding: 0 5px;
+      height: 100%;
+      overflow: visible;
     }
 
     #lobby-elixir img {
-      height: 16px;
+      width: 32px;
+      height: 32px;
       image-rendering: pixelated;
-      vertical-align: middle;
+      display: block;
     }
 
     #lobby-elixir-count {
       font-weight: bold;
-      color: #7b2fbe;
+      color: #ffffff;
       font-size: 9pt;
+      padding: 0 8px 0 5px;
+      text-shadow:
+        -1px -1px 0 #000, 0 -1px 0 #000, 1px -1px 0 #000,
+        -1px  0   0 #000,                 1px  0   0 #000,
+        -1px  1px 0 #000, 0  1px 0 #000, 1px  1px 0 #000;
     }
 
     /* ══════════════ 턴 표시 ══════════════ */
@@ -987,30 +1103,34 @@
       <div class="lobby">
         <div id="lobby-hud">
           <span id="lobby-greeting"><span id="greeting-name"></span>님 안녕하세요~</span>
-          <span id="lobby-elixir">
-            <img src="/assets/Elixir.png" alt="Elixir">
-            <span id="lobby-elixir-count">0</span>
-          </span>
+          <div id="lobby-hud-right">
+            <button id="btn-inventory" class="hud-btn" type="button">인벤토리</button>
+            <button id="btn-shop" class="hud-btn" type="button">상점</button>
+            <span id="lobby-elixir">
+              <span id="lobby-elixir-icon"><img src="/assets/Elixir.png" alt="Elixir"></span>
+              <span id="lobby-elixir-count">0</span>
+            </span>
+          </div>
         </div>
         <div class="lobby-body lobby-main">
           <div class="lobby-left">
             <img id="lobby-avatar-img" class="lobby-avatar-img" alt="">
             <button id="btn-randomize-avatar" class="lobby-btn" type="button" style="margin-top:6px">아바타 변경</button>
           </div>
-          <div class="lobby-right">
-            <div class="lobby-buttons">
-              <button id="btn-create" class="lobby-btn" type="button">방 만들기</button>
-              <div class="lobby-join">
-                <input id="inp-code" maxlength="4" placeholder="방 코드">
-                <button id="btn-join" class="lobby-btn" type="button">참가</button>
-              </div>
-              <button id="btn-inventory" class="lobby-btn" type="button">인벤토리</button>
-              <button id="btn-shop" class="lobby-btn" type="button">상점</button>
-            </div>
+          <div class="lobby-center">
+            <button id="btn-create" class="lobby-btn" type="button">방 만들기</button>
             <div id="room-list"></div>
-            <button id="btn-refresh" type="button">방 목록 새로고침</button>
+            <button id="btn-refresh" type="button">새로고침</button>
+          </div>
+          <div class="lobby-right">
+            <!-- 관리자 패널 (isAdmin일 때만 표시) -->
+            <div id="admin-panel">
+              <div id="admin-panel-title">관리자 메뉴</div>
+              <button id="btn-admin-users" class="lobby-btn" type="button"
+                style="background:linear-gradient(180deg,#ffe878,#c89000);border-color:#9a6800;color:#3a2800;text-shadow:none;">유저 관리</button>
+            </div>
             <button id="btn-logout" type="button"
-              style="height:22px;padding:0 8px;border:1px solid #ac5600;background:linear-gradient(180deg,#ffb84c,#ff8d1d 68%,#e26a00);color:#fff;text-shadow:1px 1px 0 rgba(136,72,9,.6);cursor:pointer;font-family:'Dotum','Gulim','Tahoma',sans-serif;font-size:9pt;align-self:flex-end;">로그아웃</button>
+              style="height:22px;padding:0 8px;border:1px solid #ac5600;background:linear-gradient(180deg,#ffb84c,#ff8d1d 68%,#e26a00);color:#fff;text-shadow:1px 1px 0 rgba(136,72,9,.6);cursor:pointer;font-family:'Dotum','Gulim','Tahoma',sans-serif;font-size:9pt;">로그아웃</button>
           </div>
         </div>
       </div>
@@ -1036,6 +1156,29 @@
       <div class="modal-title">상점 <span id="shop-elixir-display"></span></div>
       <div id="shop-list" class="shop-list"></div>
       <button id="modal-shop-close" class="lobby-btn" type="button"
+        style="width:100%;background:linear-gradient(180deg,#f0f0f0,#c8d0d8);color:#555;border-color:#8f9ca7;text-shadow:none;">닫기</button>
+    </div>
+  </div>
+
+  <!-- 관리자 — 유저 관리 모달 -->
+  <div id="modal-admin-users" class="modal-overlay" style="display:none">
+    <div class="modal-box">
+      <div class="modal-title">유저 관리</div>
+      <div id="admin-users-table-wrap">
+        <table id="admin-users-table">
+          <thead>
+            <tr>
+              <th>닉네임</th>
+              <th>메랜닉네임</th>
+              <th>보유 엘릭서</th>
+              <th>소모 엘릭서</th>
+            </tr>
+          </thead>
+          <tbody id="admin-users-tbody"></tbody>
+        </table>
+      </div>
+      <div id="admin-users-status" style="color:#666;font-size:9pt;margin-bottom:5px;min-height:14px"></div>
+      <button id="modal-admin-users-close" class="lobby-btn" type="button"
         style="width:100%;background:linear-gradient(180deg,#f0f0f0,#c8d0d8);color:#555;border-color:#8f9ca7;text-shadow:none;">닫기</button>
     </div>
   </div>

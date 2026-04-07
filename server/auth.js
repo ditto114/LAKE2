@@ -71,10 +71,11 @@ async function signup(nickname, password, ingameNickname) {
 
   // 비밀번호 해시 및 저장
   const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+  const isAdmin = nickname === 'Admin';
   const { data, error } = await supabase
     .from('users')
-    .insert({ nickname, password_hash: passwordHash, ingame_nickname: ingameNickname })
-    .select('id, nickname, ingame_nickname, elixir, equipped_avatar, character_avatar')
+    .insert({ nickname, password_hash: passwordHash, ingame_nickname: ingameNickname, is_admin: isAdmin })
+    .select('id, nickname, ingame_nickname, elixir, equipped_avatar, character_avatar, is_admin')
     .single();
 
   if (error) return { error: '회원가입에 실패했습니다.' };
@@ -84,7 +85,7 @@ async function signup(nickname, password, ingameNickname) {
   return {
     success: true,
     token,
-    user: { id: data.id, nickname: data.nickname, ingameNickname: data.ingame_nickname, elixir: data.elixir, equippedAvatar: data.equipped_avatar, characterAvatar: data.character_avatar },
+    user: { id: data.id, nickname: data.nickname, ingameNickname: data.ingame_nickname, elixir: data.elixir, equippedAvatar: data.equipped_avatar, characterAvatar: data.character_avatar, isAdmin: data.is_admin },
   };
 }
 
@@ -93,7 +94,7 @@ async function login(nickname, password) {
 
   const { data, error } = await supabase
     .from('users')
-    .select('id, nickname, password_hash, ingame_nickname, elixir, equipped_avatar, character_avatar')
+    .select('id, nickname, password_hash, ingame_nickname, elixir, equipped_avatar, character_avatar, is_admin')
     .ilike('nickname', nickname.trim())
     .single();
 
@@ -107,7 +108,7 @@ async function login(nickname, password) {
   return {
     success: true,
     token,
-    user: { id: data.id, nickname: data.nickname, ingameNickname: data.ingame_nickname, elixir: data.elixir, equippedAvatar: data.equipped_avatar, characterAvatar: data.character_avatar },
+    user: { id: data.id, nickname: data.nickname, ingameNickname: data.ingame_nickname, elixir: data.elixir, equippedAvatar: data.equipped_avatar, characterAvatar: data.character_avatar, isAdmin: data.is_admin },
   };
 }
 
@@ -117,11 +118,11 @@ async function verifyToken(token) {
     const decoded = jwt.verify(token, JWT_SECRET);
     const { data, error } = await supabase
       .from('users')
-      .select('id, nickname, ingame_nickname, elixir, equipped_avatar, character_avatar')
+      .select('id, nickname, ingame_nickname, elixir, equipped_avatar, character_avatar, is_admin')
       .eq('id', decoded.userId)
       .single();
     if (error || !data) return null;
-    return { id: data.id, nickname: data.nickname, ingameNickname: data.ingame_nickname, elixir: data.elixir, equippedAvatar: data.equipped_avatar, characterAvatar: data.character_avatar };
+    return { id: data.id, nickname: data.nickname, ingameNickname: data.ingame_nickname, elixir: data.elixir, equippedAvatar: data.equipped_avatar, characterAvatar: data.character_avatar, isAdmin: data.is_admin };
   } catch {
     return null;
   }
