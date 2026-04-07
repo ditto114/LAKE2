@@ -24,6 +24,10 @@ const roomManager = new RoomManager();
 // 중복 세션 추적: userId → socketId
 const activeConnections = new Map();
 
+// 재접속 유예 기간
+const RECONNECT_GRACE_MS = 10_000; // 10초
+const pendingDisconnects = new Map(); // userId → { timeoutId, roomCode }
+
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '..')));
 
@@ -151,7 +155,12 @@ function autoPlayBackdo(room, backDoIdx, movable) {
     auto: true,
   });
 
-  if (mr.winner) { handleGameOver(room, mr.winner, 'complete'); return; }
+  if (mr.gameOver) { handleGameOver(room, 'complete'); return; }
+  if (mr.ranked) {
+    io.to(room.code).emit('player-ranked', {
+      playerId: mr.ranked, rank: mr.rank, state: sanitizeState(state),
+    });
+  }
 
   // 남은 큐에 이동 가능한 말이 없으면 자동 스킵
   if (state.phase === 'MOVING' && state.throwQueue.length > 0 && !G.hasAnyMovable(state)) {
@@ -206,6 +215,8 @@ function sanitizeState(state) {
     activeThrow: state.activeThrow,
     winner: state.winner,
     turnCount: state.turnCount,
+    rankings: state.rankings,
+    forfeitOrder: state.forfeitOrder,
   };
 }
 
@@ -239,9 +250,32 @@ io.on('connection', (socket) => {
   }
   activeConnections.set(userId, socket.id);
 
+  // ── 유예 기간 내 재접속 감지 ──
+  const pending = pendingDisconnects.get(userId);
+  if (pending) {
+    clearTimeout(pending.timeoutId);
+    pendingDisconnects.delete(userId);
+    currentRoomCode = pending.roomCode;
+
+    const room = currentRoomCode ? roomManager.getRoom(currentRoomCode) : null;
+    if (room) {
+      socket.join(currentRoomCode);
+      socket.emit('session-resumed', {
+        room: roomInfo(room),
+        players: room.players.map(p => ({ id: p.id, nickname: p.nickname })),
+        state: room.gameState ? sanitizeState(room.gameState) : null,
+        timerEnd: room.timerEnd ?? null,
+        readyPlayers: [...room.readyPlayers],
+      });
+      console.log(`[재접속] ${nickname} → 방 ${currentRoomCode}`);
+    } else {
+      currentRoomCode = null;
+    }
+  }
+
   socket.on('create-room', (_, ack) => {
     if (currentRoomCode) return emitError(socket, ack, '이미 방에 참가 중입니다.');
-    const room = roomManager.createRoom(socket.id, nickname);
+    const room = roomManager.createRoom(userId, nickname);
     currentRoomCode = room.code;
     socket.join(room.code);
     const r = { room: roomInfo(room) };
@@ -251,14 +285,14 @@ io.on('connection', (socket) => {
 
   socket.on('join-room', (code, ack) => {
     if (currentRoomCode) return emitError(socket, ack, '이미 방에 참가 중입니다.');
-    const result = roomManager.joinRoom(String(code).toUpperCase(), socket.id, nickname);
+    const result = roomManager.joinRoom(String(code).toUpperCase(), userId, nickname);
     if (result.error) return emitError(socket, ack, result.error);
     const room = result.room;
     currentRoomCode = room.code;
     socket.join(room.code);
     const r = { room: roomInfo(room) };
     if (typeof ack === 'function') ack(r); else socket.emit('room-joined', r);
-    socket.to(room.code).emit('player-joined', { player: { id: socket.id, nickname } });
+    socket.to(room.code).emit('player-joined', { player: { id: userId, nickname } });
     io.to(room.code).emit('ready-update', { readyPlayers: [...room.readyPlayers] });
     console.log(`[방 참가] ${room.code} ← ${nickname}`);
   });
@@ -272,11 +306,11 @@ io.on('connection', (socket) => {
   socket.on('toggle-ready', () => {
     const room = roomManager.getRoom(currentRoomCode);
     if (!room || room.status !== 'waiting') return;
-    if (room.players[0].id === socket.id) return; // 방장은 ready 불필요
-    if (room.readyPlayers.has(socket.id)) {
-      room.readyPlayers.delete(socket.id);
+    if (room.players[0].id === userId) return; // 방장은 ready 불필요
+    if (room.readyPlayers.has(userId)) {
+      room.readyPlayers.delete(userId);
     } else {
-      room.readyPlayers.add(socket.id);
+      room.readyPlayers.add(userId);
     }
     io.to(room.code).emit('ready-update', { readyPlayers: [...room.readyPlayers] });
   });
@@ -285,7 +319,7 @@ io.on('connection', (socket) => {
   socket.on('start-game', (_, ack) => {
     const room = roomManager.getRoom(currentRoomCode);
     if (!room) return emitError(socket, ack, '방을 찾을 수 없습니다.');
-    if (room.players[0].id !== socket.id) return emitError(socket, ack, '방장만 시작할 수 있습니다.');
+    if (room.players[0].id !== userId) return emitError(socket, ack, '방장만 시작할 수 있습니다.');
     if (room.players.length < 2) return emitError(socket, ack, '상대방이 필요합니다.');
     const nonHost = room.players.slice(1);
     if (!nonHost.every(p => room.readyPlayers.has(p.id)))
@@ -293,6 +327,7 @@ io.on('connection', (socket) => {
     room.readyPlayers.clear();
     room.status = 'playing';
     room.gameState = G.createGameState(room.players.map(p => p.id));
+    room.playerNicknameMap = new Map(room.players.map(p => [p.id, p.nickname]));
     io.to(room.code).emit('game-started', {
       players: room.players.map(p => ({ id: p.id, nickname: p.nickname })),
       state: sanitizeState(room.gameState),
@@ -306,7 +341,7 @@ io.on('connection', (socket) => {
     const room = roomManager.getRoom(currentRoomCode);
     if (!room || !room.gameState) return emitError(socket, ack, '게임이 진행 중이 아닙니다.');
     const state = room.gameState;
-    if (state.players[state.currentPlayer] !== socket.id) return emitError(socket, ack, '당신의 차례가 아닙니다.');
+    if (state.players[state.currentPlayer] !== userId) return emitError(socket, ack, '당신의 차례가 아닙니다.');
     if (state.phase !== 'THROWING') return emitError(socket, ack, '던지기 단계가 아닙니다.');
 
     const tr = G.applyThrow(state);
@@ -335,7 +370,7 @@ io.on('connection', (socket) => {
     const room = roomManager.getRoom(currentRoomCode);
     if (!room || !room.gameState) return emitError(socket, ack, '게임이 진행 중이 아닙니다.');
     const state = room.gameState;
-    if (state.players[state.currentPlayer] !== socket.id) return emitError(socket, ack, '당신의 차례가 아닙니다.');
+    if (state.players[state.currentPlayer] !== userId) return emitError(socket, ack, '당신의 차례가 아닙니다.');
     if (state.phase !== 'MOVING') return emitError(socket, ack, '이동 단계가 아닙니다.');
 
     const selResult = G.selectThrow(state, throwIndex);
@@ -354,7 +389,12 @@ io.on('connection', (socket) => {
       pieceId, throwKey, ...mr, state: sanitizeState(state),
     });
 
-    if (mr.winner) { handleGameOver(room, mr.winner, 'complete'); return; }
+    if (mr.gameOver) { handleGameOver(room, 'complete'); return; }
+    if (mr.ranked) {
+      io.to(room.code).emit('player-ranked', {
+        playerId: mr.ranked, rank: mr.rank, state: sanitizeState(state),
+      });
+    }
 
     // 남은 큐에 이동 가능한 말이 없으면 자동 스킵
     if (state.phase === 'MOVING' && state.throwQueue.length > 0 && !G.hasAnyMovable(state)) {
@@ -371,11 +411,11 @@ io.on('connection', (socket) => {
   socket.on('forfeit', () => {
     const room = roomManager.getRoom(currentRoomCode);
     if (!room || !room.gameState) return;
-    const result = G.forfeit(room.gameState, socket.id);
+    const result = G.forfeit(room.gameState, userId);
     if (result.gameOver) {
-      handleGameOver(room, result.winner, 'forfeit');
+      handleGameOver(room, 'forfeit');
     } else {
-      io.to(room.code).emit('player-forfeited', { playerId: socket.id, state: sanitizeState(room.gameState) });
+      io.to(room.code).emit('player-forfeited', { playerId: userId, state: sanitizeState(room.gameState) });
       startTimer(room);
     }
   });
@@ -388,21 +428,6 @@ io.on('connection', (socket) => {
     io.to(currentRoomCode).emit('chat-message', { nickname, text, timestamp: Date.now() });
   });
 
-  // ── 재시작 ──
-  socket.on('play-again', () => {
-    const room = roomManager.getRoom(currentRoomCode);
-    if (!room) return;
-    if (room.players[0].id !== socket.id) return emitError(socket, null, '방장만 재시작할 수 있습니다.');
-    if (room.players.length < 2) return emitError(socket, null, '상대방이 필요합니다.');
-    room.status = 'playing';
-    room.gameState = G.createGameState(room.players.map(p => p.id));
-    io.to(room.code).emit('game-started', {
-      players: room.players.map(p => ({ id: p.id, nickname: p.nickname })),
-      state: sanitizeState(room.gameState),
-    });
-    startTimer(room);
-  });
-
   // ── 퇴장 ──
   socket.on('leave-room', () => handleLeave());
   socket.on('disconnect', () => {
@@ -410,25 +435,39 @@ io.on('connection', (socket) => {
     if (activeConnections.get(userId) === socket.id) {
       activeConnections.delete(userId);
     }
-    handleLeave();
+
+    if (currentRoomCode) {
+      // 즉시 퇴장 대신 유예 타이머 설정
+      const roomCode = currentRoomCode;
+      const timeoutId = setTimeout(() => {
+        pendingDisconnects.delete(userId);
+        handleLeave();
+      }, RECONNECT_GRACE_MS);
+      pendingDisconnects.set(userId, { timeoutId, roomCode });
+    }
   });
 
   function handleLeave() {
     if (!currentRoomCode) return;
     const room = roomManager.getRoom(currentRoomCode);
-    if (room && room.gameState && room.status === 'playing') {
-      const result = G.forfeit(room.gameState, socket.id);
+    const wasPlaying = !!(room && room.gameState && room.status === 'playing');
+    let gameEnded = false;
+    if (wasPlaying) {
+      const result = G.forfeit(room.gameState, userId);
       if (result.gameOver) {
-        handleGameOver(room, result.winner, 'disconnect');
+        handleGameOver(room, 'disconnect');
+        gameEnded = true;
       } else {
-        io.to(room.code).emit('player-forfeited', { playerId: socket.id, state: sanitizeState(room.gameState) });
+        io.to(room.code).emit('player-forfeited', { playerId: userId, state: sanitizeState(room.gameState) });
         startTimer(room);
       }
     }
     if (room) {
-      const lr = roomManager.leaveRoom(currentRoomCode, socket.id);
-      if (lr && !lr.disbanded) {
-        socket.to(currentRoomCode).emit('player-left', { playerId: socket.id });
+      const lr = roomManager.leaveRoom(currentRoomCode, userId);
+      // 대기실 퇴장 또는 게임 종료로 인한 퇴장 시 player-left 전송
+      // 게임 진행 중 기권(player-forfeited)은 전송 안 함
+      if (lr && !lr.disbanded && (!wasPlaying || gameEnded)) {
+        socket.to(currentRoomCode).emit('player-left', { playerId: userId });
         socket.to(currentRoomCode).emit('ready-update', { readyPlayers: [...room.readyPlayers] });
       }
     }
@@ -437,13 +476,23 @@ io.on('connection', (socket) => {
   }
 });
 
-function handleGameOver(room, winnerId, reason) {
+function handleGameOver(room, reason) {
   clearTimer(room);
-  const winner = room.players.find(p => p.id === winnerId);
-  const winnerNickname = winner ? winner.nickname : '?';
-  io.to(room.code).emit('game-over', { winner: winnerId, winnerNickname, reason });
-  room.status = 'finished';
-  console.log(`[게임 종료] ${room.code} — ${winnerNickname} 승리 (${reason})`);
+  const rankings = buildFinalRankings(room.gameState, room.playerNicknameMap);
+  // 게임 상태 초기화 — 대기실로 복귀
+  room.gameState = null;
+  room.status = 'waiting';
+  room.readyPlayers.clear();
+  io.to(room.code).emit('game-over', { rankings, reason, room: roomInfo(room) });
+  console.log(`[게임 종료] ${room.code} (${reason}) — ${rankings.map(r => r.rank + '등:' + r.nickname).join(', ')}`);
+}
+
+function buildFinalRankings(state, nicknameMap) {
+  const lookup = (id) => nicknameMap.get(id) ?? '?';
+  const ranked = state.rankings.map((id, i) => ({ rank: i + 1, id, nickname: lookup(id) }));
+  const forfeited = [...state.forfeitOrder].reverse()
+    .map((id, i) => ({ rank: state.rankings.length + i + 1, id, nickname: lookup(id) }));
+  return [...ranked, ...forfeited];
 }
 
 function emitError(socket, ack, message) {

@@ -52,7 +52,7 @@ class RoomManager {
       this.rooms.delete(code);
       return { disbanded: true };
     }
-    if (room.status !== 'waiting') {
+    if (room.status !== 'waiting' && room.players.length < 2) {
       room.status = 'waiting';
       room.gameState = null;
     }

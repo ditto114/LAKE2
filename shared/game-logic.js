@@ -105,6 +105,8 @@ function createGameState(playerIds) {
     activeThrow: null,       // 현재 이동에 선택된 결과 키
     winner: null,
     turnCount: 0,
+    rankings: [],            // 완주/잔류 순 playerId 배열 (1등부터)
+    forfeitOrder: [],        // 기권 순서 playerId 배열
   };
 }
 
@@ -340,6 +342,16 @@ function moveBackward(state, piece, throwKey) {
 
   const route = ROUTES[piece.route];
   piece.position = route[piece.routeIndex];
+
+  // 지름길에서 후퇴하여 분기점 이전 노드로 돌아온 경우 외곽 경로로 복귀
+  if (piece.route === 'shortcut5' && piece.routeIndex < ROUTES.shortcut5.indexOf(20)) {
+    piece.route = 'outer';
+    piece.routeIndex = ROUTES.outer.indexOf(piece.position);
+  } else if (piece.route === 'shortcut10' && piece.routeIndex < ROUTES.shortcut10.indexOf(23)) {
+    piece.route = 'outer';
+    piece.routeIndex = ROUTES.outer.indexOf(piece.position);
+  }
+
   syncStacked(state, piece);
 
   const captured = checkCapture(state, piece);
@@ -442,9 +454,29 @@ function endMove(state, captured, throwKey) {
     .every(p => p.finished);
 
   if (allFinished) {
-    state.phase = 'GAME_OVER';
-    state.winner = playerId;
-    return { winner: playerId };
+    const playerIdx = state.currentPlayer;
+    state.rankings.push(playerId);
+    state.activePlayers = state.activePlayers.filter(i => i !== playerIdx);
+
+    if (state.activePlayers.length === 0) {
+      state.phase = 'GAME_OVER';
+      return { ranked: playerId, rank: state.rankings.length, gameOver: true };
+    }
+    if (state.activePlayers.length === 1) {
+      const lastId = state.players[state.activePlayers[0]];
+      state.rankings.push(lastId);
+      state.activePlayers = [];
+      state.phase = 'GAME_OVER';
+      return { ranked: playerId, rank: state.rankings.length - 1, gameOver: true };
+    }
+    // 게임 계속 — 다음 active 플레이어로 턴 이동
+    const next = state.activePlayers.find(i => i > playerIdx) ?? state.activePlayers[0];
+    state.currentPlayer = next;
+    state.phase = 'THROWING';
+    state.throwQueue = [];
+    state.activeThrow = null;
+    state.turnCount++;
+    return { ranked: playerId, rank: state.rankings.length, gameOver: false };
   }
 
   // 잡기 → 추가 던지기 (단, 윷/모는 이미 추가 던지기가 부여되었으므로 제외)
@@ -577,15 +609,19 @@ function forfeit(state, playerId) {
     }
   }
 
-  // activePlayers에서 제거
+  state.forfeitOrder.push(playerId);
   state.activePlayers = state.activePlayers.filter(i => i !== playerIdx);
 
-  if (state.activePlayers.length <= 1) {
-    const winnerId = state.activePlayers.length === 1
-      ? state.players[state.activePlayers[0]] : null;
+  if (state.activePlayers.length === 0) {
     state.phase = 'GAME_OVER';
-    state.winner = winnerId;
-    return { winner: winnerId, gameOver: true };
+    return { gameOver: true };
+  }
+  if (state.activePlayers.length === 1) {
+    const lastId = state.players[state.activePlayers[0]];
+    state.rankings.push(lastId);
+    state.activePlayers = [];
+    state.phase = 'GAME_OVER';
+    return { gameOver: true };
   }
 
   // 게임 계속 — 기권자 턴이었으면 다음 플레이어로 교대
@@ -593,11 +629,11 @@ function forfeit(state, playerId) {
     state.throwQueue = [];
     state.activeThrow = null;
     const active = state.activePlayers;
-    const nextIdx = active.findIndex(i => i > playerIdx);
-    state.currentPlayer = nextIdx >= 0 ? active[nextIdx] : active[0];
+    const nextIdx = active.find(i => i > playerIdx) ?? active[0];
+    state.currentPlayer = nextIdx;
     state.phase = 'THROWING';
   }
-  return { winner: null, gameOver: false };
+  return { gameOver: false };
 }
 
 // ═══════════════════════════════════════════════════════

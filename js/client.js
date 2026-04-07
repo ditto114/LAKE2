@@ -235,7 +235,7 @@
      ══════════════════════════════════════════ */
 
   function setupSocket() {
-    socket.on('connect', () => { myId = socket.id; });
+    socket.on('connect', () => { myId = currentUser.id; });
     socket.on('connect_error', (err) => {
       if (err.message === 'Authentication required' || err.message === 'Invalid token') {
         logout();
@@ -244,6 +244,36 @@
     socket.on('session-replaced', (d) => {
       alert(d.message || '다른 곳에서 로그인되어 연결이 종료됩니다.');
       logout();
+    });
+
+    socket.on('session-resumed', (d) => {
+      room = d.room;
+      players = d.players || [];
+      readySet = new Set(d.readyPlayers || []);
+
+      if (d.room.status === 'playing' && d.state) {
+        gameState = d.state;
+        allMovable = gameState.phase === 'MOVING' && isMyTurn()
+          ? YutGame.getAllMovablePieces(gameState) : [];
+        clearSelection();
+        showScreen('game');
+        updateGame();
+        if (d.timerEnd) {
+          timerEnd = d.timerEnd;
+          const remaining = Math.ceil((d.timerEnd - Date.now()) / 1000);
+          startTimerDisplay(Math.max(remaining, 1));
+        }
+        addSystemChat('게임에 재접속했습니다.');
+      } else if (d.room.status === 'waiting') {
+        gameState = null;
+        allMovable = [];
+        clearSelection();
+        showScreen('game');
+        updateWaiting();
+        addSystemChat('대기실에 재접속했습니다.');
+      } else {
+        showScreen('lobby');
+      }
     });
 
     socket.on('room-created', (d) => { room = d.room; showScreen('game'); updateWaiting(); addSystemChat('방이 생성되었습니다. 코드: ' + room.code); });
@@ -262,7 +292,8 @@
     });
     socket.on('player-left', (d) => {
       room.players = room.players.filter(p => p.id !== d.playerId);
-      gameState = null; allMovable = []; clearSelection(); stopTimerDisplay();
+      if (gameState) return; // 게임 중: player-forfeited에서 이미 처리됨
+      allMovable = []; clearSelection(); stopTimerDisplay();
       // ready 배지 초기화는 뒤따라오는 ready-update 이벤트에서 처리됨
       updateWaiting(); addSystemChat('플레이어가 퇴장했습니다.');
     });
@@ -386,16 +417,30 @@
       }
     });
 
+    socket.on('player-ranked', (d) => {
+      gameState = d.state;
+      clearSelection();
+      const p = players.find(p => p.id === d.playerId);
+      addSystemChat(`${p ? p.nickname : '플레이어'}님이 ${d.rank}등으로 완주!`);
+      allMovable = gameState.phase === 'MOVING' && isMyTurn()
+        ? YutGame.getAllMovablePieces(gameState) : [];
+      updateGame();
+    });
+
     socket.on('game-over', (d) => {
       stopTimerDisplay(); gameState = null; allMovable = []; clearSelection();
       clearPieceGrids();
-      const reason = d.reason === 'forfeit' ? ' (기권)' : d.reason === 'disconnect' ? ' (연결 끊김)' : '';
-      addSystemChat('게임 종료! 승자: ' + d.winnerNickname + reason);
-      $('status-text').textContent = '승자: ' + d.winnerNickname + reason;
+      const reasonText = d.reason === 'forfeit' ? ' (기권)' : d.reason === 'disconnect' ? ' (연결 끊김)' : '';
+      const lines = d.rankings.map(r => `${r.rank}등: ${r.nickname}`).join('  ');
+      addSystemChat('게임 종료!' + reasonText + '  ' + lines);
       $('timer-bar').style.width = '0%';
       $('yut-sticks').innerHTML = ''; $('throw-queue').innerHTML = '';
-      if (d.winner === myId) sfx.win(); else playTone(220, 0.4, 0.1);
-      setActionArea('gameover');
+      const myRank = d.rankings.find(r => r.id === myId);
+      if (myRank && myRank.rank === 1) sfx.win(); else playTone(220, 0.4, 0.1);
+      // 대기실 인터페이스로 복귀
+      if (d.room) room = d.room;
+      readySet = new Set();
+      updateWaiting();
     });
 
     socket.on('turn-passed', (d) => {
@@ -465,8 +510,6 @@
       room = null; gameState = null; allMovable = []; clearSelection(); players = [];
       stopTimerDisplay(); showScreen('lobby');
     };
-    $('btn-again').onclick = () => socket.emit('play-again');
-
     /* ── 캔버스 클릭 ── */
     $('canvas').onclick = (e) => {
       if (!isMyTurn() || !gameState || gameState.phase !== 'MOVING') return;
@@ -750,9 +793,8 @@
     const inGame = !!(gameState && gameState.phase !== 'GAME_OVER');
     $('btn-throw').style.display  = inGame ? '' : 'none';
     $('btn-throw').disabled       = mode !== 'throw';
-    $('btn-start').style.display  = mode === 'start'    ? '' : 'none';
-    $('btn-ready').style.display  = mode === 'ready'    ? '' : 'none';
-    $('btn-again').style.display  = mode === 'gameover' ? '' : 'none';
+    $('btn-start').style.display  = mode === 'start' ? '' : 'none';
+    $('btn-ready').style.display  = mode === 'ready' ? '' : 'none';
     $('btn-forfeit').style.display = inGame ? '' : 'none';
   }
 
