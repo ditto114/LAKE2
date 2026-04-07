@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>LAKE2 레이아웃 에디터</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: "Dotum","Gulim","Tahoma",sans-serif;
+  font-size: 9pt;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ── 컨트롤 패널 ── */
+#ctrl-panel {
+  width: 300px;
+  flex-shrink: 0;
+  background: #12122a;
+  border-right: 1px solid #2a2a5a;
+  overflow-y: auto;
+  padding: 8px 8px 24px;
+}
+#ctrl-panel::-webkit-scrollbar { width: 6px; }
+#ctrl-panel::-webkit-scrollbar-track { background: #12122a; }
+#ctrl-panel::-webkit-scrollbar-thumb { background: #2a2a5a; border-radius: 3px; }
+
+.panel-title {
+  font-weight: bold;
+  color: #7cb9ff;
+  font-size: 10pt;
+  padding: 6px 0 10px;
+  border-bottom: 1px solid #2a2a5a;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.panel-title-sub { font-size: 7.5pt; color: #666; font-weight: normal; }
+
+.ctrl-section { margin-bottom: 6px; }
+.ctrl-section-title {
+  font-weight: bold;
+  color: #9ab4d4;
+  padding: 5px 6px;
+  background: #1e1e3a;
+  border: 1px solid #2a2a5a;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  user-select: none;
+  font-size: 8.5pt;
+}
+.ctrl-section-title:hover { background: #252545; }
+.ctrl-section-body {
+  border: 1px solid #2a2a5a;
+  border-top: none;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  background: #16163a;
+}
+.ctrl-section-body.collapsed { display: none; }
+
+.ctrl-row { display: flex; align-items: center; gap: 5px; }
+.ctrl-label { flex: 1; color: #9ab; font-size: 8pt; min-width: 0; }
+input[type=range] { width: 80px; accent-color: #7cb9ff; cursor: pointer; }
+input[type=number] {
+  width: 52px; padding: 1px 4px;
+  background: #0f0f2e; border: 1px solid #2a2a5a;
+  color: #e0e0e0; font-size: 8pt;
+}
+input[type=color] {
+  width: 32px; height: 22px; padding: 1px;
+  border: 1px solid #2a2a5a; background: none;
+  cursor: pointer; border-radius: 2px;
+}
+.ctrl-val { width: 34px; text-align: right; font-size: 7.5pt; color: #7cb9ff; flex-shrink: 0; }
+.ctrl-reset {
+  font-size: 7pt; color: #e94560; cursor: pointer;
+  padding: 1px 4px; border: 1px solid #e94560;
+  border-radius: 2px; flex-shrink: 0; line-height: 1.4;
+}
+.ctrl-reset:hover { background: #e94560; color: #fff; }
+
+.reset-all-btn {
+  width: 100%; padding: 5px; margin-top: 8px;
+  background: #1e1e3a; border: 1px solid #e94560;
+  color: #e94560; cursor: pointer; font-size: 8.5pt;
+  font-family: inherit;
+}
+.reset-all-btn:hover { background: #e94560; color: #fff; }
+
+/* ── 오른쪽 ── */
+#right-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+#preview-area {
+  flex: 1;
+  overflow: auto;
+  padding: 20px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  background: #111128;
+}
+#preview-area::-webkit-scrollbar { width: 8px; height: 8px; }
+#preview-area::-webkit-scrollbar-track { background: #111128; }
+#preview-area::-webkit-scrollbar-thumb { background: #2a2a5a; border-radius: 4px; }
+
+#preview-scaler {
+  transform-origin: top center;
+}
+
+/* ── CSS 출력 ── */
+#css-output-area {
+  height: 170px;
+  background: #0a0a18;
+  border-top: 2px solid #2a2a5a;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.output-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+.output-header span { color: #7cb9ff; font-weight: bold; font-size: 8.5pt; }
+#css-copy-btn {
+  padding: 2px 12px;
+  background: #1e1e3a; border: 1px solid #7cb9ff;
+  color: #7cb9ff; cursor: pointer; font-size: 8pt;
+  font-family: inherit;
+}
+#css-copy-btn:hover { background: #7cb9ff; color: #111; }
+#css-output {
+  flex: 1; overflow-y: auto;
+  font-family: "Consolas","Courier New",monospace;
+  font-size: 8pt; color: #a0d8a0;
+  white-space: pre; line-height: 1.5;
+}
+#css-output::-webkit-scrollbar { width: 6px; }
+#css-output::-webkit-scrollbar-track { background: #0a0a18; }
+#css-output::-webkit-scrollbar-thumb { background: #2a2a5a; border-radius: 3px; }
+
+/* ── 미리보기 게임 스타일 ── */
+#preview-scaler .window {
+  background: #cedfeb;
+  border: 1px solid #4f6475;
+  box-shadow: 0 0 0 1px #f8fdff, 0 0 0 2px #9ab0c2, 0 6px 20px rgba(47,64,80,.3);
+  padding: 2px;
+  font-family: "Dotum","Gulim","Tahoma",sans-serif;
+  font-size: 9pt;
+}
+#preview-scaler .window-inner {
+  border: 1px solid #d8ebf8;
+  background: linear-gradient(180deg, #eef5fa, #dce7f0);
+  box-shadow: inset 1px 1px 0 #fff, inset -1px -1px 0 #a7bbcb;
+  padding: 2px;
+}
+#preview-scaler .layout {
+  display: grid;
+  align-items: stretch;
+}
+#preview-scaler .board-panel {
+  display: grid;
+  align-items: stretch;
+}
+#preview-scaler .board-shell {
+  border: 2px solid #6f879b;
+  background: #ffffff;
+  box-shadow: inset 1px 1px 0 #fff;
+  padding: 3px;
+}
+#preview-scaler .board-mock {
+  width: 100%;
+  aspect-ratio: 1/1;
+  background: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #bbb;
+  font-size: 8pt;
+  position: relative;
+}
+#preview-scaler .board-mock::after {
+  content: '';
+  position: absolute;
+  inset: 10%;
+  border: 1px dashed #ddd;
+  border-radius: 50%;
+}
+#preview-scaler .status-frame {
+  border: 2px solid #6f879b;
+  background: #ffffff;
+  box-shadow: inset 1px 1px 0 #fff;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+}
+#preview-scaler .status-mock {
+  font-size: 8pt;
+  color: #555;
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+#preview-scaler .side-panel {
+  display: grid;
+}
+#preview-scaler .frame {
+  border: 2px solid #6f879b;
+  background: #ffffff;
+  box-shadow: inset 1px 1px 0 #fff;
+  min-width: 0;
+  min-height: 0;
+}
+#preview-scaler .header-row {
+  display: grid;
+  grid-template-columns: 71px 1fr;
+  gap: 2px;
+  height: 100%;
+}
+#preview-scaler .logo-box {
+  display: flex; align-items: center; justify-content: center;
+  text-align: center; font-size: 7pt; font-weight: bold;
+  color: #485969; line-height: 1.1;
+  border: 2px solid #6f879b;
+  background: linear-gradient(180deg, #fafdfd, #dce7ef);
+  box-shadow: inset 1px 1px 0 #fff;
+}
+#preview-scaler .title-box {
+  display: flex; align-items: center; padding: 0 8px;
+  color: #384651; font-size: 9pt;
+  border: 2px solid #6f879b;
+  background: linear-gradient(180deg, #eef3f8, #d9e3eb);
+  box-shadow: inset 1px 1px 0 #fff;
+}
+#preview-scaler .player-frame {
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+}
+#preview-scaler .pcards-row {
+  display: flex;
+  gap: 2px;
+  flex: 1;
+  min-height: 0;
+}
+#preview-scaler .pcard-mock {
+  flex: 1;
+  border: 2px solid transparent;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+}
+#preview-scaler .pcard-mock-img {
+  flex: 1;
+  background: linear-gradient(180deg, #d0dde8, #b8cad8);
+}
+#preview-scaler .pcard-mock-name {
+  height: 18px;
+  background: linear-gradient(180deg, #c5d2dc, #adbac6);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 7pt; color: #333;
+}
+#preview-scaler .pcard-mock-bottom {
+  height: 22px;
+  background: #f0f4f8;
+  display: flex; align-items: center; padding: 0 3px;
+}
+#preview-scaler .action-row {
+  display: flex;
+  justify-content: flex-end;
+  padding: 3px 2px 2px;
+  gap: 4px;
+}
+#preview-scaler .mock-btn {
+  width: 96px; height: 29px;
+  background: #c8d4dc;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 7pt; color: #445;
+  border: 1px solid #9ab;
+}
+#preview-scaler .chat-frame {
+  display: grid;
+  gap: 2px;
+  padding: 2px;
+  border: none !important;
+  box-shadow: none !important;
+}
+#preview-scaler .chat-box-mock {
+  background: #262626;
+}
+#preview-scaler .chat-input-mock {
+  height: 23px;
+  background: #3a3a4a;
+}
+#preview-scaler .bottom-frame {
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  justify-content: space-between;
+}
+#preview-scaler .bottom-frame-text {
+  font-size: 8pt; color: #555;
+}
+</style>
+</head>
+<body>
+
+<div id="ctrl-panel">
+  <div class="panel-title">
+    LAKE2 레이아웃 에디터
+    <span class="panel-title-sub">실시간 미리보기</span>
+  </div>
+  <div id="ctrl-sections"></div>
+  <button class="reset-all-btn" id="reset-all-btn">↺ 전체 기본값으로</button>
+</div>
+
+<div id="right-panel">
+  <div id="preview-area">
+    <div id="preview-scaler"></div>
+  </div>
+  <div id="css-output-area">
+    <div class="output-header">
+      <span>변경된 CSS (index.html 에 붙여넣기)</span>
+      <button id="css-copy-btn">복사</button>
+    </div>
+    <div id="css-output">변경사항 없음</div>
+  </div>
+</div>
+
+<style id="live-css-override"></style>
+
+<script>
+// ─────────────────────────────────────────
+// 기본값 (index.html 현재 값)
+// ─────────────────────────────────────────
+const DEFAULTS = {
+  window:      { borderW: 1, borderC: '#4f6475', bg: '#cedfeb', padding: 2 },
+  windowInner: { borderW: 1, borderC: '#d8ebf8', padding: 2 },
+  layout:      { gap: 2, col1: 393, col2: 362 },
+  boardShell:  { borderW: 2, borderC: '#6f879b', bg: '#ffffff', padding: 3 },
+  statusFrame: { borderW: 2, borderC: '#6f879b', bg: '#ffffff', height: 30 },
+  sidePanel:   { gap: 2, row1: 30, row3: 124, row4: 30 },
+  frame:       { borderW: 2, borderC: '#6f879b', bg: '#ffffff' },
+  logoBox:     { borderW: 2, borderC: '#6f879b' },
+  titleBox:    { borderW: 2, borderC: '#6f879b' },
+  playerFrame: { padding: 4 },
+};
+
+const vals = JSON.parse(JSON.stringify(DEFAULTS));
+
+// ─────────────────────────────────────────
+// 섹션 정의
+// ─────────────────────────────────────────
+const SECTIONS = [
+  { id: 'window', label: '전체 창  .window', props: [
+    { key: 'borderW', label: '테두리 두께', type: 'range', min: 0, max: 8, unit: 'px' },
+    { key: 'borderC', label: '테두리 색상', type: 'color' },
+    { key: 'bg',      label: '배경색',      type: 'color' },
+    { key: 'padding', label: '패딩',        type: 'range', min: 0, max: 12, unit: 'px' },
+  ]},
+  { id: 'windowInner', label: '창 내부  .window-inner', props: [
+    { key: 'borderW', label: '테두리 두께', type: 'range', min: 0, max: 8, unit: 'px' },
+    { key: 'borderC', label: '테두리 색상', type: 'color' },
+    { key: 'padding', label: '패딩',        type: 'range', min: 0, max: 12, unit: 'px' },
+  ]},
+  { id: 'layout', label: '레이아웃  .layout', props: [
+    { key: 'gap',  label: '간격 (gap)',    type: 'range', min: 0, max: 16, unit: 'px' },
+    { key: 'col1', label: '왼쪽 너비',     type: 'number', min: 280, max: 520 },
+    { key: 'col2', label: '오른쪽 너비',   type: 'number', min: 240, max: 460 },
+  ]},
+  { id: 'boardShell', label: '윷판 프레임  .board-shell', props: [
+    { key: 'borderW', label: '테두리 두께', type: 'range', min: 0, max: 8, unit: 'px' },
+    { key: 'borderC', label: '테두리 색상', type: 'color' },
+    { key: 'bg',      label: '배경색',      type: 'color' },
+    { key: 'padding', label: '패딩',        type: 'range', min: 0, max: 12, unit: 'px' },
+  ]},
+  { id: 'statusFrame', label: '상태바  .status-frame', props: [
+    { key: 'borderW', label: '테두리 두께', type: 'range', min: 0, max: 8, unit: 'px' },
+    { key: 'borderC', label: '테두리 색상', type: 'color' },
+    { key: 'bg',      label: '배경색',      type: 'color' },
+    { key: 'height',  label: '높이',        type: 'range', min: 20, max: 50, unit: 'px' },
+  ]},
+  { id: 'sidePanel', label: '사이드 패널  .side-panel', props: [
+    { key: 'gap',  label: '간격 (gap)',    type: 'range', min: 0, max: 12, unit: 'px' },
+    { key: 'row1', label: '헤더 높이',     type: 'range', min: 20, max: 60, unit: 'px' },
+    { key: 'row3', label: '채팅 높이',     type: 'range', min: 60, max: 220, unit: 'px' },
+    { key: 'row4', label: '하단바 높이',   type: 'range', min: 20, max: 60, unit: 'px' },
+  ]},
+  { id: 'frame', label: '공통 프레임  .frame', props: [
+    { key: 'borderW', label: '테두리 두께', type: 'range', min: 0, max: 8, unit: 'px' },
+    { key: 'borderC', label: '테두리 색상', type: 'color' },
+    { key: 'bg',      label: '배경색',      type: 'color' },
+  ]},
+  { id: 'logoBox', label: '로고 박스  .logo-box', props: [
+    { key: 'borderW', label: '테두리 두께', type: 'range', min: 0, max: 8, unit: 'px' },
+    { key: 'borderC', label: '테두리 색상', type: 'color' },
+  ]},
+  { id: 'titleBox', label: '타이틀  .title-box', props: [
+    { key: 'borderW', label: '테두리 두께', type: 'range', min: 0, max: 8, unit: 'px' },
+    { key: 'borderC', label: '테두리 색상', type: 'color' },
+  ]},
+  { id: 'playerFrame', label: '플레이어 패널  .player-frame', props: [
+    { key: 'padding', label: '패딩', type: 'range', min: 0, max: 16, unit: 'px' },
+  ]},
+];
+
+// ─────────────────────────────────────────
+// 컨트롤 패널 빌드
+// ─────────────────────────────────────────
+const inputRefs = {}; // secId+propKey → {input, valDisplay}
+
+function buildControls() {
+  const container = document.getElementById('ctrl-sections');
+  SECTIONS.forEach(sec => {
+    const section = document.createElement('div');
+    section.className = 'ctrl-section';
+
+    const title = document.createElement('div');
+    title.className = 'ctrl-section-title';
+    const arrow = document.createElement('span');
+    arrow.textContent = '▾';
+    title.innerHTML = `<span>${sec.label}</span>`;
+    title.appendChild(arrow);
+    title.addEventListener('click', () => {
+      body.classList.toggle('collapsed');
+      arrow.textContent = body.classList.contains('collapsed') ? '▸' : '▾';
+    });
+
+    const body = document.createElement('div');
+    body.className = 'ctrl-section-body';
+
+    sec.props.forEach(prop => {
+      const row = document.createElement('div');
+      row.className = 'ctrl-row';
+      const label = document.createElement('span');
+      label.className = 'ctrl-label';
+      label.textContent = prop.label;
+
+      const resetBtn = document.createElement('span');
+      resetBtn.className = 'ctrl-reset';
+      resetBtn.textContent = '↺';
+      resetBtn.title = '기본값';
+
+      let input, valDisplay;
+
+      if (prop.type === 'color') {
+        input = document.createElement('input');
+        input.type = 'color';
+        input.value = String(vals[sec.id][prop.key]);
+        input.addEventListener('input', e => { vals[sec.id][prop.key] = e.target.value; update(); });
+        row.append(label, input, resetBtn);
+      } else if (prop.type === 'range') {
+        input = document.createElement('input');
+        input.type = 'range';
+        input.min = prop.min; input.max = prop.max;
+        input.value = vals[sec.id][prop.key];
+        valDisplay = document.createElement('span');
+        valDisplay.className = 'ctrl-val';
+        valDisplay.textContent = vals[sec.id][prop.key] + (prop.unit || '');
+        input.addEventListener('input', e => {
+          vals[sec.id][prop.key] = +e.target.value;
+          valDisplay.textContent = e.target.value + (prop.unit || '');
+          update();
+        });
+        row.append(label, input, valDisplay, resetBtn);
+      } else if (prop.type === 'number') {
+        input = document.createElement('input');
+        input.type = 'number';
+        input.min = prop.min; input.max = prop.max;
+        input.value = vals[sec.id][prop.key];
+        input.addEventListener('change', e => {
+          const v = parseInt(e.target.value);
+          if (!isNaN(v)) { vals[sec.id][prop.key] = Math.max(prop.min, Math.min(prop.max, v)); update(); }
+        });
+        row.append(label, input, resetBtn);
+      }
+
+      const refKey = sec.id + '.' + prop.key;
+      inputRefs[refKey] = { input, valDisplay, prop };
+
+      resetBtn.addEventListener('click', () => {
+        vals[sec.id][prop.key] = DEFAULTS[sec.id][prop.key];
+        syncInput(sec.id, prop.key);
+        update();
+      });
+
+      body.appendChild(row);
+    });
+
+    section.appendChild(title);
+    section.appendChild(body);
+    container.appendChild(section);
+  });
+}
+
+function syncInput(secId, propKey) {
+  const ref = inputRefs[secId + '.' + propKey];
+  if (!ref) return;
+  const v = vals[secId][propKey];
+  ref.input.value = v;
+  if (ref.valDisplay) ref.valDisplay.textContent = v + (ref.prop.unit || '');
+}
+
+function syncAllInputs() {
+  SECTIONS.forEach(sec => sec.props.forEach(prop => syncInput(sec.id, prop.key)));
+}
+
+// ─────────────────────────────────────────
+// live CSS 생성 (미리보기 오버라이드)
+// ─────────────────────────────────────────
+function buildLiveCSS() {
+  const v = vals;
+  return `
+#preview-scaler .window {
+  background: ${v.window.bg};
+  border: ${v.window.borderW}px solid ${v.window.borderC};
+  padding: ${v.window.padding}px;
+}
+#preview-scaler .window-inner {
+  border: ${v.windowInner.borderW}px solid ${v.windowInner.borderC};
+  padding: ${v.windowInner.padding}px;
+}
+#preview-scaler .layout {
+  grid-template-columns: ${v.layout.col1}px ${v.layout.col2}px;
+  gap: ${v.layout.gap}px;
+}
+#preview-scaler .board-panel {
+  grid-template-rows: minmax(0,1fr) ${v.statusFrame.height}px;
+  gap: ${v.layout.gap}px;
+}
+#preview-scaler .board-shell {
+  border: ${v.boardShell.borderW}px solid ${v.boardShell.borderC};
+  background: ${v.boardShell.bg};
+  padding: ${v.boardShell.padding}px;
+}
+#preview-scaler .status-frame {
+  min-height: ${v.statusFrame.height}px;
+  border: ${v.statusFrame.borderW}px solid ${v.statusFrame.borderC};
+  background: ${v.statusFrame.bg};
+}
+#preview-scaler .side-panel {
+  grid-template-rows: ${v.sidePanel.row1}px minmax(0,1fr) ${v.sidePanel.row3}px ${v.sidePanel.row4}px;
+  gap: ${v.sidePanel.gap}px;
+}
+#preview-scaler .frame {
+  border: ${v.frame.borderW}px solid ${v.frame.borderC};
+  background: ${v.frame.bg};
+}
+#preview-scaler .logo-box {
+  border: ${v.logoBox.borderW}px solid ${v.logoBox.borderC};
+}
+#preview-scaler .title-box {
+  border: ${v.titleBox.borderW}px solid ${v.titleBox.borderC};
+}
+#preview-scaler .player-frame {
+  padding: ${v.playerFrame.padding}px;
+}
+#preview-scaler .chat-frame {
+  grid-template-rows: minmax(0,1fr) 23px;
+}
+`;
+}
+
+// ─────────────────────────────────────────
+// diff CSS 생성 (복사용)
+// ─────────────────────────────────────────
+function buildDiffCSS() {
+  const v = vals;
+  const d = DEFAULTS;
+  const sections = [];
+
+  function changed(secId, propKey) {
+    return JSON.stringify(vals[secId][propKey]) !== JSON.stringify(DEFAULTS[secId][propKey]);
+  }
+  function anyChanged(...pairs) {
+    return pairs.some(([s,p]) => changed(s,p));
+  }
+
+  if (anyChanged(['window','borderW'],['window','borderC'],['window','bg'],['window','padding'])) {
+    sections.push(`.window {
+  width: min(100%, 766px);
+  background: ${v.window.bg};
+  border: ${v.window.borderW}px solid ${v.window.borderC};
+  box-shadow: 0 0 0 1px #f8fdff, 0 0 0 2px #9ab0c2, 0 10px 28px rgba(47,64,80,.22);
+  padding: ${v.window.padding}px;
+}`);
+  }
+
+  if (anyChanged(['windowInner','borderW'],['windowInner','borderC'],['windowInner','padding'])) {
+    sections.push(`.window-inner {
+  border: ${v.windowInner.borderW}px solid ${v.windowInner.borderC};
+  background: linear-gradient(180deg, #eef5fa, #dce7f0);
+  box-shadow: inset 1px 1px 0 #fff, inset -1px -1px 0 #a7bbcb;
+  padding: ${v.windowInner.padding}px;
+}`);
+  }
+
+  if (anyChanged(['layout','gap'],['layout','col1'],['layout','col2'])) {
+    sections.push(`.layout {
+  display: grid;
+  grid-template-columns: ${v.layout.col1}px ${v.layout.col2}px;
+  gap: ${v.layout.gap}px;
+  align-items: stretch;
+}`);
+  }
+
+  if (anyChanged(['boardShell','borderW'],['boardShell','borderC'],['boardShell','bg'],['boardShell','padding'])) {
+    sections.push(`.board-shell {
+  border: ${v.boardShell.borderW}px solid ${v.boardShell.borderC};
+  background: ${v.boardShell.bg};
+  box-shadow: inset 1px 1px 0 #fff;
+  padding: ${v.boardShell.padding}px;
+}`);
+  }
+
+  if (anyChanged(['statusFrame','borderW'],['statusFrame','borderC'],['statusFrame','bg'],['statusFrame','height'])) {
+    sections.push(`.status-frame {
+  min-height: ${v.statusFrame.height}px;
+  border: ${v.statusFrame.borderW}px solid ${v.statusFrame.borderC};
+  background: ${v.statusFrame.bg};
+  box-shadow: inset 1px 1px 0 #fff;
+  padding: 1px 7px 0;
+}`);
+  }
+
+  if (anyChanged(['sidePanel','gap'],['sidePanel','row1'],['sidePanel','row3'],['sidePanel','row4'])) {
+    sections.push(`.side-panel {
+  display: grid;
+  grid-template-rows: ${v.sidePanel.row1}px minmax(0, 1fr) ${v.sidePanel.row3}px ${v.sidePanel.row4}px;
+  gap: ${v.sidePanel.gap}px;
+}`);
+  }
+
+  if (anyChanged(['frame','borderW'],['frame','borderC'],['frame','bg'])) {
+    sections.push(`.frame {
+  border: ${v.frame.borderW}px solid ${v.frame.borderC};
+  background: ${v.frame.bg};
+  box-shadow: inset 1px 1px 0 #fff;
+  min-width: 0;
+  min-height: 0;
+}`);
+  }
+
+  if (anyChanged(['logoBox','borderW'],['logoBox','borderC'])) {
+    sections.push(`.logo-box {
+  border: ${v.logoBox.borderW}px solid ${v.logoBox.borderC};
+  /* 나머지 속성 유지 */
+}`);
+  }
+
+  if (anyChanged(['titleBox','borderW'],['titleBox','borderC'])) {
+    sections.push(`.title-box {
+  border: ${v.titleBox.borderW}px solid ${v.titleBox.borderC};
+  /* 나머지 속성 유지 */
+}`);
+  }
+
+  if (changed('playerFrame','padding')) {
+    sections.push(`.player-frame {
+  padding: ${v.playerFrame.padding}px;
+}`);
+  }
+
+  return sections.length ? sections.join('\n\n') : '변경사항 없음';
+}
+
+// ─────────────────────────────────────────
+// 미리보기 HTML
+// ─────────────────────────────────────────
+function buildPreviewHTML() {
+  const names = ['플레이어1', 'P2', 'P3', 'P4'];
+  const pcards = names.map((n,i) => `
+    <div class="pcard-mock">
+      <div class="pcard-mock-img"></div>
+      <div class="pcard-mock-name">${n}</div>
+      <div class="pcard-mock-bottom">
+        <span style="font-size:6pt;color:#888">● ● ●</span>
+      </div>
+    </div>`).join('');
+
+  return `
+<div class="window">
+  <div class="window-inner">
+    <div class="layout">
+
+      <!-- 왼쪽: 윷판 -->
+      <div class="board-panel">
+        <div class="board-shell">
+          <div class="board-mock">윷판</div>
+        </div>
+        <div class="status-frame">
+          <div class="status-mock">
+            <span>대기 중...</span>
+            <span>남은 시간 : -- 초</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 오른쪽: 사이드 패널 -->
+      <div class="side-panel">
+
+        <div class="frame">
+          <div class="header-row">
+            <div class="logo-box">MAPLE<br>MINI</div>
+            <div class="title-box">윷놀이한판요</div>
+          </div>
+        </div>
+
+        <div class="frame player-frame">
+          <div class="pcards-row">${pcards}</div>
+          <div class="action-row">
+            <div class="mock-btn">START</div>
+          </div>
+        </div>
+
+        <div class="frame chat-frame">
+          <div class="chat-box-mock"></div>
+          <div class="chat-input-mock"></div>
+        </div>
+
+        <div class="frame bottom-frame">
+          <span class="bottom-frame-text">방 코드: ABCD</span>
+          <span class="bottom-frame-text">나가기</span>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>`;
+}
+
+// ─────────────────────────────────────────
+// 스케일 조정
+// ─────────────────────────────────────────
+function adjustScale() {
+  const scaler = document.getElementById('preview-scaler');
+  const area = document.getElementById('preview-area');
+  const totalW = vals.layout.col1 + vals.layout.col2 + vals.layout.gap + 20;
+  const availW = area.clientWidth - 40;
+  const availH = area.clientHeight - 40;
+  const estH = totalW * 0.78; // approximate aspect ratio
+  const scaleW = availW / totalW;
+  const scaleH = availH / estH;
+  const scale = Math.min(1, scaleW, scaleH);
+  scaler.style.transform = `scale(${scale})`;
+  scaler.style.transformOrigin = 'top center';
+  scaler.style.width = totalW + 'px';
+  scaler.style.marginBottom = `-${estH * (1 - scale)}px`;
+}
+
+// ─────────────────────────────────────────
+// 업데이트
+// ─────────────────────────────────────────
+function update() {
+  document.getElementById('live-css-override').textContent = buildLiveCSS();
+  document.getElementById('preview-scaler').innerHTML = buildPreviewHTML();
+  document.getElementById('css-output').textContent = buildDiffCSS();
+  adjustScale();
+}
+
+// ─────────────────────────────────────────
+// 전체 리셋
+// ─────────────────────────────────────────
+document.getElementById('reset-all-btn').addEventListener('click', () => {
+  Object.assign(vals, JSON.parse(JSON.stringify(DEFAULTS)));
+  syncAllInputs();
+  update();
+});
+
+// ─────────────────────────────────────────
+// 복사 버튼
+// ─────────────────────────────────────────
+document.getElementById('css-copy-btn').addEventListener('click', () => {
+  const text = document.getElementById('css-output').textContent;
+  if (text === '변경사항 없음') return;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('css-copy-btn');
+    const orig = btn.textContent;
+    btn.textContent = '복사됨 ✓';
+    setTimeout(() => btn.textContent = orig, 1800);
+  });
+});
+
+// ─────────────────────────────────────────
+// 초기화
+// ─────────────────────────────────────────
+buildControls();
+update();
+window.addEventListener('resize', () => adjustScale());
+</script>
+</body>
+</html>

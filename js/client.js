@@ -287,6 +287,21 @@
         clearSelection();
         const { avatarMap, dupSet } = buildAvatarMap(d.players || []);
         board.setPlayerAvatars(avatarMap, dupSet);
+        // 플레이어 카드 이름 복원
+        for (let i = 0; i < 4; i++) {
+          const card = $('p' + i + '-card');
+          if (!card) continue;
+          card.style.display = '';
+          const badge = $('p' + i + '-ready-badge');
+          if (badge) badge.textContent = '';
+          if (players[i]) {
+            $('p' + i + '-name').textContent = players[i].nickname;
+            card.classList.remove('empty-slot');
+          } else {
+            $('p' + i + '-name').textContent = '';
+            card.classList.add('empty-slot');
+          }
+        }
         showScreen('game');
         updateGame();
         if (d.timerEnd) {
@@ -468,7 +483,7 @@
       const reasonText = d.reason === 'forfeit' ? ' (기권)' : d.reason === 'disconnect' ? ' (연결 끊김)' : '';
       const lines = d.rankings.map(r => `${r.rank}등: ${r.nickname}`).join('  ');
       addSystemChat('게임 종료!' + reasonText + '  ' + lines);
-      $('timer-bar').style.width = '0%';
+      $('timer-text').textContent = '--';
       $('yut-sticks').innerHTML = ''; $('throw-queue').innerHTML = '';
       const myRank = d.rankings.find(r => r.id === myId);
       if (myRank && myRank.rank === 1) sfx.win(); else playTone(220, 0.4, 0.1);
@@ -503,20 +518,17 @@
       if (!timerEnd) return;
       const remain = Math.max(0, timerEnd - Date.now());
       const sec = Math.ceil(remain / 1000);
-      $('timer-text').textContent = sec + '초';
-      $('timer-bar').style.width = (remain / totalMs * 100) + '%';
+      $('timer-text').textContent = String(sec).padStart(2, '0');
       const urgent = sec <= 5 && sec > 0;
       $('timer-text').classList.toggle('urgent', urgent);
-      $('timer-bar').classList.toggle('urgent', urgent);
       if (urgent) sfx.tick();
       if (remain <= 0) stopTimerDisplay();
     }, 250);
   }
   function stopTimerDisplay() {
     if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
-    $('timer-text').textContent = '';
+    $('timer-text').textContent = '--';
     $('timer-text').classList.remove('urgent');
-    $('timer-bar').classList.remove('urgent');
   }
 
   /* ══════════════════════════════════════════
@@ -543,7 +555,7 @@
     $('btn-leave').onclick = () => {
       socket.emit('leave-room');
       room = null; gameState = null; allMovable = []; clearSelection(); players = [];
-      stopTimerDisplay(); showScreen('lobby');
+      stopTimerDisplay(); $('chat-log').innerHTML = ''; showScreen('lobby');
     };
     /* ── 캔버스 클릭 ── */
     $('canvas').onclick = (e) => {
@@ -712,7 +724,10 @@
      ══════════════════════════════════════════ */
 
   function updateWaiting() {
-    $('room-code-label').textContent = '방: ' + room.code;
+    for (let i = 0; i < 4; i++) {
+      const card = $('p' + i + '-card');
+      if (card) card.classList.remove('active-turn');
+    }
     const isHost = room.players[0]?.id === myId;
     const nonHostPlayers = room.players.slice(1);
     const allReady = nonHostPlayers.length > 0 && nonHostPlayers.every(p => readySet.has(p.id));
@@ -731,7 +746,7 @@
         if (i === 0) {
           card.classList.add('is-host');
           card.classList.remove('is-ready');
-          if (badge) badge.textContent = '방장';
+          if (badge) badge.textContent = '';
         } else {
           card.classList.remove('is-host');
           const ready = readySet.has(room.players[i].id);
@@ -753,7 +768,7 @@
     $('yut-result').textContent = '';
     $('yut-sticks').innerHTML = '';
     $('throw-queue').innerHTML = '';
-    $('timer-bar').style.width = '0%';
+    $('timer-text').textContent = '--';
     $('timer-text').textContent = '';
 
     if (isHost) {
@@ -905,7 +920,7 @@
   function addSystemChat(text) {
     const log = $('chat-log');
     const p = document.createElement('p'); p.style.color = '#f0d060';
-    p.textContent = '▸ ' + text;
+    p.textContent = text;
     log.appendChild(p); log.scrollTop = log.scrollHeight;
   }
 

@@ -41,7 +41,7 @@
         url("./assets/Map_3F3F.webp") center / cover no-repeat fixed;
       padding: 16px;
       color: #2d3136;
-      font-family: "Gulim", "Dotum", "Tahoma", sans-serif;
+      font-family: "Dotum", "Gulim", "Tahoma", sans-serif;
       font-size: 9pt;
       line-height: 1.15;
     }
@@ -54,11 +54,7 @@
     /* ══════════════ 윈도우 프레임 ══════════════ */
 
     .window {
-      width: min(100%, 742px);
-      background: #cedfeb;
-      border: 1px solid #4f6475;
-      box-shadow: 0 0 0 1px #f8fdff, 0 0 0 2px #9ab0c2, 0 10px 28px rgba(47, 64, 80, .22);
-      padding: 2px;
+      width: min(100%, 738px);
     }
 
     .window-inner {
@@ -177,7 +173,7 @@
 
     .layout {
       display: grid;
-      grid-template-columns: 393px 338px;
+      grid-template-columns: 393px 337px;
       gap: 2px;
       align-items: stretch;
     }
@@ -197,7 +193,7 @@
 
     .board-shell {
       border: 2px solid #6f879b;
-      background: #f8fbfd;
+      background: #ffffff;
       box-shadow: inset 1px 1px 0 #fff;
       padding: 3px;
     }
@@ -224,7 +220,7 @@
     .status-frame {
       min-height: 30px;
       border: 2px solid #6f879b;
-      background: #f8fbfd;
+      background: #ffffff;
       box-shadow: inset 1px 1px 0 #fff;
       padding: 1px 7px 0;
     }
@@ -249,13 +245,13 @@
 
     .side-panel {
       display: grid;
-      grid-template-rows: 30px minmax(0, 1fr) 14px 110px 30px;
+      grid-template-rows: 38px minmax(0, 1fr) 124px 30px;
       gap: 2px;
     }
 
     .frame {
       border: 2px solid #6f879b;
-      background: #f8fbfd;
+      background: #ffffff;
       box-shadow: inset 1px 1px 0 #fff;
       min-width: 0;
       min-height: 0;
@@ -263,35 +259,25 @@
 
     /* 헤더 */
     .header-row {
-      display: grid;
-      grid-template-columns: 71px 1fr;
-      gap: 2px;
-      height: 100%;
+      position: relative;
+      width: 337px;
+      height: 38px;
+      background: url('/assets/header_bg.png') no-repeat left top;
+      background-size: auto;
     }
 
-    .logo-box {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      color: #485969;
-      font-size: 8px;
-      font-weight: bold;
-      line-height: 1.05;
-      border: 2px solid #6f879b;
-      background: linear-gradient(180deg, #fafdfd, #dce7ef);
-      box-shadow: inset 1px 1px 0 #fff;
-    }
-
-    .title-box {
+    .header-title {
+      position: absolute;
+      left: 103px;
+      top: 0;
+      bottom: 0;
+      right: 0;
       display: flex;
       align-items: center;
       padding: 0 8px;
-      color: #384651;
+      color: #000000;
       font-size: 9pt;
-      border: 2px solid #6f879b;
-      background: linear-gradient(180deg, #eef3f8, #d9e3eb);
-      box-shadow: inset 1px 1px 0 #fff;
+      transform: translateY(-1px);
     }
 
     /* 플레이어 정보 */
@@ -309,72 +295,68 @@
       flex-direction: row;
       gap: 4px;
       min-height: 0;
+      justify-content: center;
     }
 
     .pcard {
-      flex: 1;
-      min-width: 0;
-      border: 2px solid #b0bcc8;
+      flex: none;
+      width: 77px;
+      outline: 2px solid transparent;
       background: #fff;
-      padding: 4px;
+      padding: 0;
       display: flex;
       flex-direction: column;
-      gap: 3px;
+      gap: 0;
+      position: relative;
     }
 
-    .pcard.p0 {
-      border-color: #2488d3;
+    .pcard-host-icon {
+      display: none;
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      width: 16px;
+      height: 16px;
+      z-index: 5;
+      pointer-events: none;
     }
 
-    .pcard.p1 {
-      border-color: #e04848;
+    .pcard.is-host .pcard-host-icon {
+      display: block;
     }
 
-    .pcard.p2 {
-      border-color: #28a428;
+    .pcard.p0.active-turn { outline-color: #e03030; }
+    .pcard.p1.active-turn { outline-color: #28a428; }
+    .pcard.p2.active-turn { outline-color: #d4b800; }
+    .pcard.p3.active-turn { outline-color: #8844cc; }
+
+    .pcard-avatar-bg {
+      width: 77px;
+      height: 91px;
+      background: url('/assets/Card_avatar_bg.png') no-repeat left top;
+      background-size: auto;
     }
 
-    .pcard.p3 {
-      border-color: #e07818;
+    .pcard-namebar {
+      position: relative;
+      width: 77px;
+      height: 18px;
+      background: url('/assets/Card_name_bg.png') no-repeat left top;
+      background-size: auto;
+      flex-shrink: 0;
     }
 
     .pcard-name {
+      position: absolute;
+      inset: 0;
       text-align: center;
       font-size: 9pt;
       font-weight: normal;
-      padding: 2px 0;
-      background: #eef3f8;
-      border-bottom: 2px solid transparent;
+      line-height: 18px;
       white-space: nowrap;
       overflow: hidden;
-    }
-
-    .pcard-color {
-      width: 14px;
-      height: 14px;
-      border-radius: 50%;
-      margin: 2px auto;
-      border: 1px solid;
-    }
-
-    .pcard.p0 .pcard-color {
-      background: #2488d3;
-      border-color: #155f8a;
-    }
-
-    .pcard.p1 .pcard-color {
-      background: #e04848;
-      border-color: #a03030;
-    }
-
-    .pcard.p2 .pcard-color {
-      background: #28a428;
-      border-color: #1a6b1a;
-    }
-
-    .pcard.p3 .pcard-color {
-      background: #e07818;
-      border-color: #9c4800;
+      padding: 0 2px;
+      color: #000000;
     }
 
     /* 카드 하단 (말 그리드 + 배지) */
@@ -383,7 +365,7 @@
       align-items: flex-end;
       justify-content: space-between;
       margin-top: auto;
-      padding-top: 2px;
+      padding: 3px 4px 4px;
     }
 
     .pcard-piece-grid {
@@ -416,23 +398,23 @@
     }
 
     .pcard.p0 .piece-dot {
-      background: radial-gradient(circle at 35% 35%, #7dc4ff, #2488d3);
-      border-color: #155f8a;
+      background: radial-gradient(circle at 35% 35%, #ff9090, #e03030);
+      border-color: #a02020;
     }
 
     .pcard.p1 .piece-dot {
-      background: radial-gradient(circle at 35% 35%, #ff9898, #e04848);
-      border-color: #a03030;
-    }
-
-    .pcard.p2 .piece-dot {
       background: radial-gradient(circle at 35% 35%, #7de07d, #28a428);
       border-color: #1a6b1a;
     }
 
+    .pcard.p2 .piece-dot {
+      background: radial-gradient(circle at 35% 35%, #ffe050, #d4b800);
+      border-color: #9a8400;
+    }
+
     .pcard.p3 .piece-dot {
-      background: radial-gradient(circle at 35% 35%, #ffb870, #e07818);
-      border-color: #9c4800;
+      background: radial-gradient(circle at 35% 35%, #cc99ff, #8844cc);
+      border-color: #5a2a99;
     }
 
     /* 보드 위 윷 표시 오버레이 */
@@ -451,17 +433,20 @@
     }
 
     /* 플레이어 카드 하단 액션 버튼 */
+    .cards-divider {
+      display: block;
+      align-self: center;
+    }
+
     .player-action-row {
       display: flex;
       justify-content: flex-start;
-      padding: 4px 4px 0;
+      padding: 0 4px 0;
       gap: 6px;
     }
 
     /* 빈 슬롯 카드 */
     .pcard.empty-slot {
-      opacity: 0.28;
-      background: #e8edf2;
       pointer-events: none;
     }
 
@@ -475,14 +460,9 @@
     }
 
     .pcard.is-ready {
-      box-shadow: 0 0 0 2px #28a428, 0 0 6px rgba(40, 164, 40, .25);
     }
 
-    .pcard.is-host .pcard-ready-badge {
-      color: #2488d3;
-    }
-
-    /* READY 버튼 활성 상태 */
+/* READY 버튼 활성 상태 */
     #btn-ready.ready-active {
       border-color: #1a7a1a;
       background: linear-gradient(180deg, #5bc05b, #3a9d3a);
@@ -565,16 +545,18 @@
     /* 채팅 */
     .chat-frame {
       display: grid;
-      grid-template-rows: minmax(0, 1fr) 25px;
+      grid-template-rows: minmax(0, 1fr) 23px;
       gap: 2px;
       padding: 2px;
+      border: none;
+      box-shadow: none;
     }
 
     .chat-shell {
-      border: 1px solid #9eb1c0;
-      background: #fff;
-      box-shadow: inset 1px 1px 0 #fff, inset -1px -1px 0 #d4dce4;
-      padding: 1px;
+      border: none;
+      background: none;
+      box-shadow: none;
+      padding: 0;
       min-height: 0;
       overflow: hidden;
     }
@@ -582,8 +564,8 @@
     .chat-box {
       position: relative;
       height: 100%;
-      background: var(--chat-bg);
-      border: 1px solid #767f88;
+      background: url('/assets/chat_bg.png') center / 100% 100% no-repeat;
+      border: none;
       overflow: hidden;
     }
 
@@ -591,11 +573,11 @@
       position: absolute;
       inset: 0;
       padding: 6px;
-      color: #f0f0f0;
+      color: #ffffff;
       overflow-y: auto;
       overflow-x: hidden;
       line-height: 1.35;
-      font-size: 8.5pt;
+      font-size: 9pt;
     }
 
     .chat-log p {
@@ -604,16 +586,21 @@
 
     .chat-input-row {
       margin-top: 0;
+      display: flex;
+      align-items: center;
     }
 
     .chat-input {
-      width: 100%;
-      height: 21px;
-      border: 1px solid #7f96aa;
-      background: #f9f9fb;
-      box-shadow: inset 1px 1px 0 #fff, inset -1px -1px 0 #c5d2dc;
-      padding: 0 5px;
+      width: 219px;
+      height: 23px;
+      border: none;
+      background: url('/assets/chat_input_bg.png') no-repeat left center;
+      background-size: auto;
+      box-shadow: none;
+      padding: 0 6px 0 9px;
       outline: none;
+      color: #ffffff;
+      flex-shrink: 0;
     }
 
     /* 하단 버튼 */
@@ -691,7 +678,8 @@
     #timer-text {
       min-width: 28px;
       text-align: right;
-      font-size: 9px;
+      font-family: "Dotum","Gulim","Tahoma",sans-serif;
+      font-size: 9pt;
       font-weight: bold;
       color: #555;
     }
@@ -754,7 +742,7 @@
     }
 
     #lobby-greeting {
-      font-family: "Gulim", "Dotum", "Tahoma", sans-serif;
+      font-family: "Dotum", "Gulim", "Tahoma", sans-serif;
       font-size: 9pt;
       color: #384651;
     }
@@ -780,11 +768,6 @@
     /* ══════════════ 턴 표시 ══════════════ */
 
     .pcard.active-turn {
-      box-shadow: 0 0 0 2px #ffcc00, 0 0 8px rgba(255, 200, 0, .35);
-    }
-
-    .pcard.active-turn .pcard-name {
-      background: #fff8d8;
     }
 
     /* ══════════════ 반응형 ══════════════ */
@@ -840,7 +823,7 @@
       padding: 8px;
       min-width: 280px;
       max-width: 400px;
-      font-family: "Gulim", "Dotum", "Tahoma", sans-serif;
+      font-family: "Dotum", "Gulim", "Tahoma", sans-serif;
       font-size: 9pt;
       box-shadow: 0 4px 16px rgba(0, 0, 0, .3);
     }
@@ -985,7 +968,7 @@
           <div id="room-list"></div>
           <button id="btn-refresh" type="button">방 목록 새로고침</button>
           <button id="btn-logout" type="button"
-            style="height:22px;padding:0 8px;border:1px solid #ac5600;background:linear-gradient(180deg,#ffb84c,#ff8d1d 68%,#e26a00);color:#fff;text-shadow:1px 1px 0 rgba(136,72,9,.6);cursor:pointer;font-family:'Gulim','Dotum','Tahoma',sans-serif;font-size:9pt;align-self:flex-end;">로그아웃</button>
+            style="height:22px;padding:0 8px;border:1px solid #ac5600;background:linear-gradient(180deg,#ffb84c,#ff8d1d 68%,#e26a00);color:#fff;text-shadow:1px 1px 0 rgba(136,72,9,.6);cursor:pointer;font-family:'Dotum','Gulim','Tahoma',sans-serif;font-size:9pt;align-self:flex-end;">로그아웃</button>
         </div>
       </div>
     </div>
@@ -1034,7 +1017,10 @@
           <div class="status-frame">
             <div class="status-bar">
               <span id="status-text">대기 중...</span>
-              <span id="room-code-label"></span>
+              <span id="timer-display" style="display:flex;align-items:center;gap:3px;white-space:nowrap;">
+                <img src="/assets/Icon_timer.png" alt="" style="width:13px;height:13px;vertical-align:middle;">
+                남은 시간 : <span id="timer-text">--</span> 초
+              </span>
             </div>
           </div>
         </section>
@@ -1044,46 +1030,58 @@
 
           <!-- 헤더 -->
           <div class="header-row">
-            <div class="logo-box">MAPLE<br>MINIGAME</div>
-            <div class="title-box">윷놀이한판요</div>
+            <span class="header-title">윷놀이한판요</span>
           </div>
 
           <!-- 플레이어 정보 -->
           <section class="frame player-frame">
             <div class="player-cards">
               <div id="p0-card" class="pcard p0 is-host">
-                <div id="p0-name" class="pcard-name">대기 중</div>
-                <div class="pcard-color"></div>
+                <img class="pcard-host-icon" src="/assets/host_icon.png" alt="방장">
+                <div class="pcard-avatar-bg"></div>
+                <div class="pcard-namebar">
+                  <div id="p0-name" class="pcard-name">대기 중</div>
+                </div>
                 <div class="pcard-bottom">
                   <div id="p0-pieces" class="pcard-piece-grid"></div>
                   <div id="p0-ready-badge" class="pcard-ready-badge"></div>
                 </div>
               </div>
               <div id="p1-card" class="pcard p1">
-                <div id="p1-name" class="pcard-name">대기 중...</div>
-                <div class="pcard-color"></div>
+                <img class="pcard-host-icon" src="/assets/host_icon.png" alt="방장">
+                <div class="pcard-avatar-bg"></div>
+                <div class="pcard-namebar">
+                  <div id="p1-name" class="pcard-name">대기 중...</div>
+                </div>
                 <div class="pcard-bottom">
                   <div id="p1-pieces" class="pcard-piece-grid"></div>
                   <div id="p1-ready-badge" class="pcard-ready-badge"></div>
                 </div>
               </div>
               <div id="p2-card" class="pcard p2 empty-slot">
-                <div id="p2-name" class="pcard-name"></div>
-                <div class="pcard-color"></div>
+                <img class="pcard-host-icon" src="/assets/host_icon.png" alt="방장">
+                <div class="pcard-avatar-bg"></div>
+                <div class="pcard-namebar">
+                  <div id="p2-name" class="pcard-name"></div>
+                </div>
                 <div class="pcard-bottom">
                   <div id="p2-pieces" class="pcard-piece-grid"></div>
                   <div id="p2-ready-badge" class="pcard-ready-badge"></div>
                 </div>
               </div>
               <div id="p3-card" class="pcard p3 empty-slot">
-                <div id="p3-name" class="pcard-name"></div>
-                <div class="pcard-color"></div>
+                <img class="pcard-host-icon" src="/assets/host_icon.png" alt="방장">
+                <div class="pcard-avatar-bg"></div>
+                <div class="pcard-namebar">
+                  <div id="p3-name" class="pcard-name"></div>
+                </div>
                 <div class="pcard-bottom">
                   <div id="p3-pieces" class="pcard-piece-grid"></div>
                   <div id="p3-ready-badge" class="pcard-ready-badge"></div>
                 </div>
               </div>
             </div>
+            <img class="cards-divider" src="/assets/cards_divider.png" alt="">
             <div class="player-action-row">
               <button id="btn-throw" class="game-btn primary" type="button" style="display:none">윷 던지기 (Space)</button>
               <div class="right-actions">
@@ -1092,14 +1090,6 @@
               </div>
             </div>
           </section>
-
-          <!-- 타이머 -->
-          <div class="timer-wrap">
-            <div class="timer-track">
-              <div id="timer-bar" class="timer-fill" style="width:0%"></div>
-            </div>
-            <span id="timer-text"></span>
-          </div>
 
           <!-- 채팅 -->
           <section class="frame chat-frame">

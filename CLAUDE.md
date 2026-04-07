@@ -21,8 +21,8 @@ npm run dev      # --watch 모드
 
 ## 코딩 규칙
 
-- 모든 UI 텍스트의 기본 폰트는 **굴림(Gulim) 9pt**로 통일한다.
-  - CSS: `font-family: "Gulim","Dotum","Tahoma",sans-serif; font-size: 9pt;`
+- 모든 UI 텍스트의 기본 폰트는 **돋움(Dotum) 9pt**로 통일한다.
+  - CSS: `font-family: "Dotum","Gulim","Tahoma",sans-serif; font-size: 9pt;`
   - 새로운 UI 요소를 추가할 때 반드시 이 기본값을 따른다.
 - 프론트엔드는 Vanilla JS (프레임워크 없음)
 - 서버는 Node.js + Express + Socket.IO

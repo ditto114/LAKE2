@@ -11,10 +11,10 @@ class BoardRenderer {
     this._waitPos = {};   // pieceId → {x,y} 대기 말 캔버스 좌표
 
     this.COLORS = [
-      { f: '#2488d3', s: '#155f8a', h: '#7dc4ff' },  // P0 blue
-      { f: '#e04848', s: '#a03030', h: '#ff9898' },  // P1 red
-      { f: '#28a428', s: '#1a6b1a', h: '#7de07d' },  // P2 green
-      { f: '#e07818', s: '#9c4800', h: '#ffb870' },  // P3 orange
+      { f: '#e03030', s: '#a02020', h: '#ff9090' },  // P0 red
+      { f: '#28a428', s: '#1a6b1a', h: '#7de07d' },  // P1 green
+      { f: '#d4b800', s: '#9a8400', h: '#ffe050' },  // P2 yellow
+      { f: '#8844cc', s: '#5a2a99', h: '#cc99ff' },  // P3 purple
     ];
     // Keep P0 and P1 as aliases for backward compatibility
     this.P0 = this.COLORS[0];
@@ -363,7 +363,7 @@ class BoardRenderer {
 
     if (stackCount > 1) {
       ctx.fillStyle = '#000';
-      ctx.font = 'bold 10pt "Gulim","Dotum","Tahoma",sans-serif';
+      ctx.font = 'bold 10pt "Dotum","Gulim","Tahoma",sans-serif';
       ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
       ctx.fillText(String(stackCount), px, py - r - 1);
     }

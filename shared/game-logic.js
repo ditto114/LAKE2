@@ -352,6 +352,12 @@ function moveBackward(state, piece, throwKey) {
     piece.routeIndex = ROUTES.outer.indexOf(piece.position);
   }
 
+  // shortcut5에서 후퇴하여 중앙(22) 착지 시 → center 경로 전환 (moveForward와 동일)
+  if (piece.route === 'shortcut5' && piece.position === 22) {
+    piece.route = 'center';
+    piece.routeIndex = 0;
+  }
+
   syncStacked(state, piece);
 
   const captured = checkCapture(state, piece);
@@ -541,15 +547,18 @@ function previewMove(state, pieceId, throwKey) {
   // 출발지(노드 0)에 있는 말은 전진 시 무조건 골인
   if (piece.position === 0) return { position: -2, finished: true };
 
-  const routeKey = piece.position === -1 ? 'outer' : piece.route;
+  // shortcut5에서 후퇴해 22에 있는 말은 center 루트로 취급
+  const effectiveRoute = (piece.route === 'shortcut5' && piece.position === 22) ? 'center' : piece.route;
+  const effectiveIdx   = (piece.route === 'shortcut5' && piece.position === 22) ? 0 : piece.routeIndex;
+
+  const routeKey = piece.position === -1 ? 'outer' : effectiveRoute;
   const route = ROUTES[routeKey];
-  const idx = piece.position === -1 ? steps - 1 : piece.routeIndex + steps;
+  const idx = piece.position === -1 ? steps - 1 : effectiveIdx + steps;
 
   if (idx >= route.length) return { position: -2, finished: true };
 
   let pos = route[idx];
 
-  // 지름길 착지 시에도 노드 자체는 같으므로 pos 그대로
   return { position: pos };
 }
 
